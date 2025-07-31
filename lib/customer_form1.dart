@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'customer_form2.dart';
+import 'models/customer_model.dart';
 
 class AddCustomerPage extends StatelessWidget {
   final _formKey = GlobalKey<FormState>();
@@ -153,7 +154,25 @@ class AddCustomerPage extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => CustomerForm2(),
+                              builder: (context) => CustomerForm2(
+                                customer: CustomerModel(
+                                  username: usernameController.text,
+                                  password: passwordController.text,
+                                  firstName: firstNameController.text,
+                                  lastName: lastNameController.text,
+                                  email: emailController.text,
+                                  phone: phoneController.text,
+                                  vehicleReg: '',
+                                  vehicleCode: '',
+                                  gender: '',
+                                  addresses: [],
+                                  avatarUrl: '',
+                                  notes: '',
+                                  status: 'active',
+                                  newsletter: 'yes',
+                                  notify: false,
+                                ),
+                              ),
                             ),
                           );
                         }
@@ -166,7 +185,6 @@ class AddCustomerPage extends StatelessWidget {
                         style: TextStyle(color: Colors.white),
                       ),
                     ),
-
                   ],
                 ),
               ],

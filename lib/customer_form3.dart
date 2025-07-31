@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'customer_form4.dart';
+import 'models/customer_model.dart'; // Make sure this is correct
 
 class CustomerForm3 extends StatefulWidget {
+  final CustomerModel customer;
+
+  const CustomerForm3({super.key, required this.customer});
+
   @override
   State<CustomerForm3> createState() => _AddressFormPageState();
 }
@@ -13,8 +18,7 @@ class _AddressFormPageState extends State<CustomerForm3> {
   @override
   void initState() {
     super.initState();
-    // Add the first address form
-    addNewAddress();
+    addNewAddress(); // Add initial address block
   }
 
   void addNewAddress() {
@@ -109,7 +113,7 @@ class _AddressFormPageState extends State<CustomerForm3> {
                       ),
                     ),
                     icon: Icon(Icons.add),
-                    label: Text("Add another address",style: TextStyle(color: Colors.white)),
+                    label: Text("Add another address", style: TextStyle(color: Colors.white)),
                   ),
                 ),
                 SizedBox(height: 20),
@@ -130,10 +134,23 @@ class _AddressFormPageState extends State<CustomerForm3> {
                     ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
+                          List<Map<String, dynamic>> addresses = addressList.map((addr) {
+                            return {
+                              'address': addr['address']!.text,
+                              'country': addr['country']!.text,
+                              'city': addr['city']!.text,
+                              'zip': addr['zip']!.text,
+                            };
+                          }).toList();
+
+                          CustomerModel updatedCustomer = widget.customer.copyWith(
+                            addresses: addresses,
+                          );
+
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => customer_form4(),
+                              builder: (context) => customer_form4(customer: updatedCustomer),
                             ),
                           );
                         }

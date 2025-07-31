@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
-
 import 'customer_form3.dart';
+import 'models/customer_model.dart';
 
-class CustomerForm2  extends StatefulWidget {
+class CustomerForm2 extends StatefulWidget {
+  final CustomerModel customer;
+
+  const CustomerForm2({Key? key, required this.customer}) : super(key: key);
+
   @override
-  State<CustomerForm2> createState() => _AddCustomerPageState();
+  State<CustomerForm2> createState() => _CustomerForm2State();
 }
 
-class _AddCustomerPageState extends State<CustomerForm2> {
+class _CustomerForm2State extends State<CustomerForm2> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController vehicleRegController = TextEditingController();
   final TextEditingController vehicleCodeController = TextEditingController();
 
   String? selectedGender;
+
+  @override
+  void dispose() {
+    vehicleRegController.dispose();
+    vehicleCodeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +41,7 @@ class _AddCustomerPageState extends State<CustomerForm2> {
                 children: [
                   IconButton(
                     icon: Icon(Icons.arrow_back),
-                    onPressed: () {},
+                    onPressed: () => Navigator.pop(context),
                   ),
                   SizedBox(width: 10),
                   Text('Dashboard', style: TextStyle(fontSize: 16)),
@@ -71,17 +82,15 @@ class _AddCustomerPageState extends State<CustomerForm2> {
                     buildTextField(
                       controller: vehicleRegController,
                       hint: "Vehicule registration number",
-                      validator: (value) => value == null || value.isEmpty
-                          ? "This field is required"
-                          : null,
+                      validator: (value) =>
+                      value == null || value.isEmpty ? "This field is required" : null,
                     ),
                     buildLabel("Vehicule code"),
                     buildTextField(
                       controller: vehicleCodeController,
                       hint: "Vehicule code",
-                      validator: (value) => value == null || value.isEmpty
-                          ? "This field is required"
-                          : null,
+                      validator: (value) =>
+                      value == null || value.isEmpty ? "This field is required" : null,
                     ),
                     buildLabel("Gender"),
                     buildGenderDropdown(),
@@ -108,10 +117,17 @@ class _AddCustomerPageState extends State<CustomerForm2> {
                   ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate() && selectedGender != null) {
+                        // Update customer model
+                        CustomerModel updatedCustomer = widget.customer.copyWith(
+                          vehicleReg: vehicleRegController.text,
+                          vehicleCode: vehicleCodeController.text,
+                          gender: selectedGender!,
+                        );
+
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => CustomerForm3(),
+                            builder: (context) => CustomerForm3(customer: updatedCustomer),
                           ),
                         );
                       } else if (selectedGender == null) {

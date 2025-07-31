@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'models/customer_model.dart'; // Adjust path if needed
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class customer_form4 extends StatefulWidget {
+  final CustomerModel customer;
+
+  const customer_form4({Key? key, required this.customer}) : super(key: key);
+
   @override
   State<customer_form4> createState() => _AddCustomerFinalFormState();
 }
@@ -15,6 +22,93 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
   final TextEditingController avatarUrlController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
 
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with existing customer data if any
+    userStatus = widget.customer.status;
+    newsletterSub = widget.customer.newsletter;
+    notifyUser = widget.customer.notify;
+    avatarUrlController.text = widget.customer.avatarUrl;
+    notesController.text = widget.customer.notes;
+  }
+
+  @override
+  void dispose() {
+    avatarUrlController.dispose();
+    notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Create updated customer model with latest form values
+    final updatedCustomer = widget.customer.copyWith(
+      status: userStatus,
+      newsletter: newsletterSub,
+      avatarUrl: avatarUrlController.text,
+      notes: notesController.text,
+      notify: notifyUser,
+    );
+
+    try {
+      // 1. Create Firebase Authentication user
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+        email: updatedCustomer.email,
+        password: updatedCustomer.password,
+      );
+
+      final uid = userCredential.user!.uid;
+
+      // 2. Save customer data in Firestore under 'clients' collection with UID
+      await FirebaseFirestore.instance
+          .collection('clients')
+          .doc(uid)
+          .set(updatedCustomer.toJson());
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User successfully added!')),
+      );
+
+      // Navigate back to start or wherever
+      Navigator.popUntil(context, (route) => route.isFirst);
+
+    } on FirebaseAuthException catch (e) {
+      // Show auth error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Authentication Error: ${e.message}')),
+      );
+    } catch (e) {
+      // Show unexpected errors
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Widget buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10.0, bottom: 5),
+      child: Text(
+        text,
+        style: TextStyle(fontStyle: FontStyle.italic),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,7 +122,10 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
               // Top bar
               Row(
                 children: [
-                  IconButton(icon: Icon(Icons.arrow_back), onPressed: () {}),
+                  IconButton(
+                    icon: Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                   SizedBox(width: 10),
                   Text('Dashboard', style: TextStyle(fontSize: 16)),
                 ],
@@ -118,8 +215,7 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
                       decoration: InputDecoration(
                         hintText: 'Insert the URL for your avatar',
                         border: OutlineInputBorder(),
-                        contentPadding:
-                        EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 15),
                       ),
                     ),
                     SizedBox(height: 10),
@@ -129,8 +225,7 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
                       children: [
                         Checkbox(
                           value: notifyUser,
-                          onChanged: (value) =>
-                              setState(() => notifyUser = value!),
+                          onChanged: (value) => setState(() => notifyUser = value!),
                           activeColor: Colors.deepPurple,
                         ),
                         Text("Notify User"),
@@ -145,8 +240,7 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
                       decoration: InputDecoration(
                         hintText: 'User Notes – For internal use only',
                         border: OutlineInputBorder(),
-                        contentPadding:
-                        EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 15),
                       ),
                     ),
                   ],
@@ -172,35 +266,26 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
                     child: Text('Cancel'),
                   ),
                   ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        // You can process the form here
-                        print("Avatar URL: ${avatarUrlController.text}");
-                      }
-                    },
+                    onPressed: _isLoading ? null : _submitForm,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
                     ),
-                    child: Text(
+                    child: _isLoading
+                        ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                        : Text(
                       "Add new user",
                       style: TextStyle(color: Colors.white),
                     ),
-                  )
+                  ),
                 ],
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10.0, bottom: 5),
-      child: Text(
-        text,
-        style: TextStyle(fontStyle: FontStyle.italic),
       ),
     );
   }

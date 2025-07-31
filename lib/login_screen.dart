@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'add_shipment_screen.dart'; // Adjust import path
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,6 +12,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isLoading = false;
 
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -20,6 +22,57 @@ class _LoginScreenState extends State<LoginScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _login() async {
+    final email = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter email and password')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Attempt sign-in with Firebase Auth
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Navigate to AddShipmentScreen on success
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AddShipmentScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      String message = 'Login failed';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -53,28 +106,29 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
 
                 // Title
-                Text(
+                const Text(
                   'Login',
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 5),
 
-                Text(
+                const Text(
                   'Sign into your account for full access',
-                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 25),
 
-                // Username
+                // Username / Email
                 TextField(
                   controller: _usernameController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Username',
-                    hintText: 'Enter your username',
+                    labelText: 'Email',
+                    hintText: 'Enter your email',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -132,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        // TODO: handle forgot password
+                        // TODO: implement forgot password
                       },
                       child: const Text('Forgot password?'),
                     ),
@@ -144,12 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: handle login logic
-                      print('Username: ${_usernameController.text}');
-                      print('Password: ${_passwordController.text}');
-                      print('Remember me: $_rememberMe');
-                    },
+                    onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: Colors.blue,
@@ -157,7 +206,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: const Text(
+                    child: _isLoading
+                        ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                        : const Text(
                       'Enter',
                       style: TextStyle(color: Colors.white),
                     ),
