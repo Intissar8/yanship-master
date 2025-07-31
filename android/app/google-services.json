@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "969048987321",
+    "project_id": "yanship-c3893",
+    "storage_bucket": "yanship-c3893.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:969048987321:android:4334f35e67c9eba49a6d68",
+        "android_client_info": {
+          "package_name": "com.example.yanship"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDt-T3WvFuZGJ2oH1V5DcHwIChEYuZz5Xk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
