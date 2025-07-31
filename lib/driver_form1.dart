@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'driver_form2.dart';
+import 'models/driver_model.dart';
 
-class AddDriverPage extends StatelessWidget {
+class AddDriverPage  extends StatelessWidget {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController usernameController = TextEditingController();
@@ -66,7 +67,6 @@ class AddDriverPage extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 SizedBox(height: 20),
 
                 // Form fields
@@ -158,7 +158,25 @@ class AddDriverPage extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => driver_form2(),
+                              builder: (context) => driver_form2(
+                                customer: DriverModel(
+                                  username: usernameController.text,
+                                  password: passwordController.text,
+                                  firstName: firstNameController.text,
+                                  lastName: lastNameController.text,
+                                  email: emailController.text,
+                                  phone: phoneController.text,
+                                  vehicleReg: '',
+                                  vehicleCode: '',
+                                  gender: '',
+                                  addresses: [],
+                                  avatarUrl: '',
+                                  notes: '',
+                                  status: 'active',
+                                  newsletter: 'yes',
+                                  notify: false,
+                                ),
+                              ),
                             ),
                           );
                         }
@@ -171,7 +189,6 @@ class AddDriverPage extends StatelessWidget {
                         style: TextStyle(color: Colors.white),
                       ),
                     ),
-
                   ],
                 ),
               ],

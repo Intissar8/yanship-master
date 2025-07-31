@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'add_shipment_screen.dart';
 import 'customer_form1.dart';
+import 'customer_form3.dart';
 import 'driver_form1.dart';
 import 'login_screen.dart';
 

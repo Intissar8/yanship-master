@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'add_shipment_screen.dart'; // Adjust import path
+import 'add_shipment_screen.dart'; // Make sure the path is correct
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,13 +40,23 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Attempt sign-in with Firebase Auth
+      // Static admin login
+      if (email == 'admin@gmail.com' && password == '123456789') {
+        await Future.delayed(const Duration(milliseconds: 500)); // Optional delay
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AddShipmentScreen()),
+        );
+        return;
+      }
+
+      // Firebase login
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Navigate to AddShipmentScreen on success
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -98,20 +108,15 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo
                 Image.asset(
                   'assets/images/logo.png',
                   height: 80,
                 ),
                 const SizedBox(height: 10),
 
-                // Title
                 const Text(
                   'Login',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 5),
 
@@ -122,7 +127,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 25),
 
-                // Username / Email
                 TextField(
                   controller: _usernameController,
                   keyboardType: TextInputType.emailAddress,
@@ -136,7 +140,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 15),
 
-                // Password
                 TextField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -160,7 +163,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // Remember me & forgot password
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -186,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        // TODO: implement forgot password
+                        // TODO: Forgot password logic
                       },
                       child: const Text('Forgot password?'),
                     ),
@@ -194,7 +196,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // Login button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -221,17 +222,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
 
-                // Register link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("You don’t have an account?"),
                     TextButton(
                       onPressed: () {
-                        // TODO: navigate to register screen
+                        // TODO: Navigate to register page
                       },
                       child: const Text("Register"),
                     ),

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
 import 'driver_form4.dart';
+import 'models/driver_model.dart';
 
-class DriverForm3 extends StatefulWidget {
+class DriverForm3  extends StatefulWidget {
+  final DriverModel customer;
+
+  const DriverForm3({super.key, required this.customer});
+
   @override
   State<DriverForm3> createState() => _AddressFormPageState();
 }
@@ -14,8 +19,7 @@ class _AddressFormPageState extends State<DriverForm3> {
   @override
   void initState() {
     super.initState();
-    // Add the first address form
-    addNewAddress();
+    addNewAddress(); // Add initial address block
   }
 
   void addNewAddress() {
@@ -119,7 +123,7 @@ class _AddressFormPageState extends State<DriverForm3> {
                       ),
                     ),
                     icon: Icon(Icons.add),
-                    label: Text("Add another address",style: TextStyle(color: Colors.white)),
+                    label: Text("Add another address", style: TextStyle(color: Colors.white)),
                   ),
                 ),
                 SizedBox(height: 20),
@@ -140,13 +144,25 @@ class _AddressFormPageState extends State<DriverForm3> {
                     ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
+                          List<Map<String, dynamic>> addresses = addressList.map((addr) {
+                            return {
+                              'address': addr['address']!.text,
+                              'country': addr['country']!.text,
+                              'city': addr['city']!.text,
+                              'zip': addr['zip']!.text,
+                            };
+                          }).toList();
+
+                          DriverModel updatedCustomer = widget.customer.copyWith(
+                            addresses: addresses,
+                          );
+
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => driver_form4(),
+                              builder: (context) => driver_form4(customer: updatedCustomer),
                             ),
                           );
-                          // You can collect the addresses and proceed
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -189,3 +205,4 @@ class _AddressFormPageState extends State<DriverForm3> {
     );
   }
 }
+
