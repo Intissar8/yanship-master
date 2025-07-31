@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AddShipmentScreen extends StatefulWidget {
   const AddShipmentScreen({super.key});
@@ -19,7 +21,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
   bool dontAuthorize = false;
 
   final List<String> cityOptions = [
-    'Value', // Default option
+    'Value',
     '-- Grand Casablanca --',
     'Casablanca',
     'Mohammedia',
@@ -52,6 +54,56 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
     'Khouribga',
   ];
 
+  Future<void> submitShipment() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("User not logged in")),
+      );
+      return;
+    }
+
+    final shipmentData = {
+      'city': selectedCity,
+      'receiverName': receiverNameController.text.trim(),
+      'address': addressController.text.trim(),
+      'phone': phoneController.text.trim(),
+      'price': priceController.text.trim(),
+      'dontAuthorize': dontAuthorize,
+      'clientId': user.uid,
+      'driverId': null,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await FirebaseFirestore.instance.collection('shipments').add(shipmentData);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Shipment added successfully!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      _formKey.currentState!.reset();
+      receiverNameController.clear();
+      addressController.clear();
+      phoneController.clear();
+      priceController.clear();
+      setState(() {
+        selectedCity = null;
+        dontAuthorize = false;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,15 +129,13 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
               children: [
                 Container(
                   width: double.infinity,
-                  padding:
-                  const EdgeInsets.symmetric(vertical: 14, horizontal: 15),
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 15),
                   decoration: BoxDecoration(
                     color: Colors.grey[400],
-                    borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(4)),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                   ),
-                  child: Row(
-                    children: const [
+                  child: const Row(
+                    children: [
                       Icon(Icons.local_shipping_outlined, color: Colors.green),
                       SizedBox(width: 8),
                       Text(
@@ -100,8 +150,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                   ),
                 ),
                 Padding(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 15, vertical: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 18),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -112,11 +161,9 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                         const SizedBox(height: 15),
                         buildLabeledField('Address', addressController),
                         const SizedBox(height: 15),
-                        buildLabeledField('Phone', phoneController,
-                            TextInputType.phone),
+                        buildLabeledField('Phone', phoneController, TextInputType.phone),
                         const SizedBox(height: 15),
-                        buildLabeledField('Price', priceController,
-                            TextInputType.number),
+                        buildLabeledField('Price', priceController, TextInputType.number),
                         const SizedBox(height: 15),
                         Row(
                           children: [
@@ -137,16 +184,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                           width: double.infinity,
                           height: 44,
                           child: ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Order added successfully!"),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              }
-                            },
+                            onPressed: submitShipment,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               shape: RoundedRectangleBorder(
@@ -197,23 +235,19 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
             if (value == null || value.trim().isEmpty) {
               return '$label is required';
             }
-
             if (label == 'Phone' && !RegExp(r'^\d{10}$').hasMatch(value)) {
               return 'Phone must be exactly 10 digits';
             }
-
             if (label == 'Price' && !RegExp(r'^\d+$').hasMatch(value)) {
               return 'Price must contain only numbers';
             }
-
             return null;
           },
           decoration: InputDecoration(
             hintText: label,
             filled: true,
             fillColor: Colors.white,
-            contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
               borderSide: const BorderSide(color: Colors.grey),
@@ -273,8 +307,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
-            contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
               borderSide: const BorderSide(color: Colors.grey),
