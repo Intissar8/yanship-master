@@ -1,10 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:yanship/register_screen.dart';
 import 'add_shipment_screen.dart';
 import 'customer_form1.dart';
 import 'customer_form3.dart';
 import 'driver_form1.dart';
+import 'forgot_password_screen.dart';
 import 'login_screen.dart';
 
 
