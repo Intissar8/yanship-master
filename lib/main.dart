@@ -32,7 +32,7 @@ void main() async {
 
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
-    home: LoginScreen(),
+    home: AddCustomerPage(),
   ));
 }
 
