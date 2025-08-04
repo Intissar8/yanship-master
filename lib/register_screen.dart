@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -17,20 +18,23 @@ Please let me know what information you need from me to proceed.
 
 Thank you!
 ''');
+    final Uri emailLaunchUri =
+    Uri.parse("mailto:$supportEmail?subject=$subject&body=$body");
 
-    final Uri emailLaunchUri = Uri.parse("mailto:$supportEmail?subject=$subject&body=$body");
-
-    try {
-      final launched = await launchUrl(emailLaunchUri, mode: LaunchMode.platformDefault);
-      if (!launched) {
-        _showErrorDialog(context, 'No email app found to handle this request.');
+    if (kIsWeb) {
+      // On web, show fallback dialog
+      _showWebFallbackDialog(context, emailLaunchUri);
+    } else {
+      try {
+        final launched = await launchUrl(emailLaunchUri, mode: LaunchMode.platformDefault);
+        if (!launched) {
+          _showErrorDialog(context, 'No email app found to handle this request.');
+        }
+      } catch (e) {
+        _showErrorDialog(context, 'Failed to open email app.');
       }
-    } catch (e) {
-      _showErrorDialog(context, 'Failed to open email app.');
     }
   }
-
-
 
   void _showErrorDialog(BuildContext context, String message) {
     showDialog(
@@ -48,6 +52,44 @@ Thank you!
     );
   }
 
+  void _showWebFallbackDialog(BuildContext context, Uri emailUri) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Contact Support'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Your browser might not be able to open your email app directly.\n\nYou can manually send an email to:",
+            ),
+            const SizedBox(height: 10),
+            SelectableText(
+              supportEmail,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await launchUrl(emailUri);
+            },
+            child: const Text('Open Mail App'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _contactByPhone() async {
     final Uri phoneLaunchUri = Uri(
@@ -113,7 +155,7 @@ Thank you!
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed:() => _contactByEmail(context),
+                          onPressed: () => _contactByEmail(context),
                           icon: const Icon(Icons.email),
                           label: const Text("Contact by Email"),
                           style: ElevatedButton.styleFrom(
@@ -143,7 +185,6 @@ Thank you!
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 30),
 
                       Row(
