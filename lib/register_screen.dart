@@ -1,7 +1,64 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
+
+  final String supportEmail = "test@example.com";
+  final String supportPhone = "+212667436245";
+
+  void _contactByEmail(BuildContext context) async {
+    final String subject = Uri.encodeComponent("Account Registration");
+    final String body = Uri.encodeComponent('''
+Hello Support Team,
+
+I would like to request the creation of a new account.
+Please let me know what information you need from me to proceed.
+
+Thank you!
+''');
+
+    final Uri emailLaunchUri = Uri.parse("mailto:$supportEmail?subject=$subject&body=$body");
+
+    try {
+      final launched = await launchUrl(emailLaunchUri, mode: LaunchMode.platformDefault);
+      if (!launched) {
+        _showErrorDialog(context, 'No email app found to handle this request.');
+      }
+    } catch (e) {
+      _showErrorDialog(context, 'Failed to open email app.');
+    }
+  }
+
+
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Oops'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  void _contactByPhone() async {
+    final Uri phoneLaunchUri = Uri(
+      scheme: 'tel',
+      path: supportPhone,
+    );
+
+    if (await canLaunchUrl(phoneLaunchUri)) {
+      await launchUrl(phoneLaunchUri);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,9 +71,7 @@ class RegisterScreen extends StatelessWidget {
           return Center(
             child: SingleChildScrollView(
               child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: isWide ? 500 : double.infinity,
-                ),
+                constraints: BoxConstraints(maxWidth: isWide ? 500 : double.infinity),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40),
@@ -34,14 +89,11 @@ class RegisterScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Logo
                       Image.asset(
                         'assets/images/logo.png',
                         height: 100,
                       ),
                       const SizedBox(height: 30),
-
-                      // Title
                       const Text(
                         'Register now!',
                         style: TextStyle(
@@ -50,52 +102,56 @@ class RegisterScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-
-                      // Subtitle
                       const Text(
-                        "Let's set up your account in just a couple of steps.",
+                        "Choose how you'd like to contact support to register.",
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey),
                       ),
                       const SizedBox(height: 30),
 
-                      // Gradient button
-                      GestureDetector(
-                        onTap: () {
-                          // You can trigger a support action here
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF4C5BD4), Color(0xFF3F51B5)],
-                            ),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'Contact our support team to register, thanks',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
+                      // Email Contact Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed:() => _contactByEmail(context),
+                          icon: const Icon(Icons.email),
+                          label: const Text("Contact by Email"),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.blue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
+
+                      // Phone Contact Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _contactByPhone,
+                          icon: const Icon(Icons.phone),
+                          label: const Text("Contact by Phone"),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: const BorderSide(color: Colors.blue),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+
                       const SizedBox(height: 30),
 
-                      // Sign In link
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text("Already have an account? "),
                           GestureDetector(
-                            onTap: () {
-                              Navigator.pop(context); // Go back to LoginScreen
-                            },
+                            onTap: () => Navigator.pop(context),
                             child: const Text(
                               "Sign in",
                               style: TextStyle(
