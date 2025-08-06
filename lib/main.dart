@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:yanship/register_client_screen.dart';
 import 'package:yanship/register_screen.dart';
 import 'add_shipment_screen.dart';
 import 'customer_form1.dart';
@@ -32,7 +33,7 @@ void main() async {
 
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
-    home: LoginScreen(),
+    home: RegisterClientScreen(),
   ));
 }
 

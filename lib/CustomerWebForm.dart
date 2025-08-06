@@ -1,0 +1,303 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'models/customer_model.dart';
+
+class CustomerWebForm extends StatefulWidget {
+  const CustomerWebForm({super.key});
+
+  @override
+  State<CustomerWebForm> createState() => _CustomerWebFormState();
+}
+
+class _CustomerWebFormState extends State<CustomerWebForm> {
+  final _formKey = GlobalKey<FormState>();
+
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController firstNameController = TextEditingController();
+  final TextEditingController lastNameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController vehicleRegController = TextEditingController();
+  final TextEditingController vehicleCodeController = TextEditingController();
+  String? selectedGender;
+
+  List<Map<String, TextEditingController>> addressList = [];
+
+  final TextEditingController avatarUrlController = TextEditingController();
+  final TextEditingController notesController = TextEditingController();
+  String userStatus = 'active';
+  String newsletterSub = 'yes';
+  bool notifyUser = false;
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    addNewAddress();
+  }
+
+  void addNewAddress() {
+    setState(() {
+      addressList.add({
+        'address': TextEditingController(),
+        'country': TextEditingController(),
+        'city': TextEditingController(),
+        'zip': TextEditingController(),
+      });
+    });
+  }
+
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate() || selectedGender == null) {
+      if (selectedGender == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please select a gender")),
+        );
+      }
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    List<Map<String, dynamic>> addresses = addressList.map((addr) => {
+      'address': addr['address']!.text,
+      'country': addr['country']!.text,
+      'city': addr['city']!.text,
+      'zip': addr['zip']!.text,
+    }).toList();
+
+    CustomerModel customer = CustomerModel(
+      username: usernameController.text,
+      password: passwordController.text,
+      firstName: firstNameController.text,
+      lastName: lastNameController.text,
+      email: emailController.text,
+      phone: phoneController.text,
+      vehicleReg: vehicleRegController.text,
+      vehicleCode: vehicleCodeController.text,
+      gender: selectedGender!,
+      addresses: addresses,
+      avatarUrl: avatarUrlController.text,
+      notes: notesController.text,
+      status: userStatus,
+      newsletter: newsletterSub,
+      notify: notifyUser,
+    );
+
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+          email: customer.email, password: customer.password);
+
+      final uid = userCredential.user!.uid;
+
+      await FirebaseFirestore.instance
+          .collection('clients')
+          .doc(uid)
+          .set(customer.toJson());
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Success"),
+          content: const Text("User registered successfully!"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Auth error: ${e.message}')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F7FA),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Wrap(
+                runSpacing: 24,
+                spacing: 24,
+                alignment: WrapAlignment.center,
+                children: [
+                  _buildCard("Account Info", [
+                    _buildTextField(usernameController, "Username", Icons.person_outline),
+                    _buildTextField(passwordController, "Password", Icons.lock_outline, isPassword: true),
+                    _buildTextField(firstNameController, "First Name", Icons.badge_outlined),
+                    _buildTextField(lastNameController, "Last Name", Icons.badge),
+                    _buildTextField(emailController, "Email", Icons.email_outlined, isEmail: true),
+                    _buildTextField(phoneController, "Phone", Icons.phone, isPhone: true),
+                  ]),
+
+                  _buildCard("Vehicle & Gender", [
+                    _buildTextField(vehicleRegController, "Vehicle Registration", Icons.directions_car),
+                    _buildTextField(vehicleCodeController, "Vehicle Code", Icons.code),
+                    DropdownButtonFormField<String>(
+                      value: selectedGender,
+                      items: ["homme", "femme"]
+                          .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                          .toList(),
+                      onChanged: (v) => setState(() => selectedGender = v),
+                      validator: (_) => selectedGender == null ? 'Select gender' : null,
+                      decoration: const InputDecoration(labelText: "Gender"),
+                    ),
+                  ]),
+
+                  _buildCard("Addresses", [
+                    ...addressList.map((addr) => Column(
+                      children: [
+                        _buildTextField(addr['address']!, "Address", Icons.home),
+                        _buildTextField(addr['country']!, "Country", Icons.flag),
+                        _buildTextField(addr['city']!, "City", Icons.location_city),
+                        _buildTextField(addr['zip']!, "Zip", Icons.numbers, isNumber: true),
+                        const Divider(),
+                      ],
+                    )),
+                    TextButton.icon(
+                      onPressed: addNewAddress,
+                      icon: const Icon(Icons.add, color: Colors.blue),
+                      label: const Text("Add Another Address", style: TextStyle(color: Colors.blue)),
+                    ),
+                  ]),
+
+                  _buildCard("Final Info", [
+                    _buildTextField(avatarUrlController, "Avatar URL", Icons.link),
+                    _buildTextField(notesController, "Notes", Icons.note, maxLines: 3, isOptional: true),
+                    _buildRadioGroup("User Status", userStatus, ['active', 'inactive'], (v) => setState(() => userStatus = v)),
+                    _buildRadioGroup("Newsletter", newsletterSub, ['yes', 'no'], (v) => setState(() => newsletterSub = v)),
+                    CheckboxListTile(
+                      title: const Text("Notify user"),
+                      value: notifyUser,
+                      onChanged: (v) => setState(() => notifyUser = v!),
+                    ),
+                  ]),
+
+                  Center(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                      ),
+                      onPressed: isLoading ? null : _submitForm,
+                      child: isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text("Submit", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCard(String title, List<Widget> children) {
+    return Container(
+      width: 450,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black12, width: 1.2),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(2, 2))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.circle, size: 10, color: Colors.redAccent),
+              const SizedBox(width: 8),
+              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...children
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon,
+      {bool isPassword = false, bool isEmail = false, bool isPhone = false, bool isNumber = false, int maxLines = 1, bool isOptional = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextFormField(
+        controller: controller,
+        obscureText: isPassword,
+        maxLines: maxLines,
+        keyboardType: isNumber
+            ? TextInputType.number
+            : isPhone
+            ? TextInputType.phone
+            : isEmail
+            ? TextInputType.emailAddress
+            : TextInputType.text,
+        validator: (value) {
+          if (isOptional) return null;
+          if (value == null || value.isEmpty) return 'Required';
+          if (isEmail && !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value))
+            return 'Invalid email';
+
+          if (isPhone && !RegExp(r'^\d{9}$').hasMatch(value))
+            return '9-digit phone required';
+
+          return null;
+        },
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Colors.black54),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRadioGroup(String title, String groupValue, List<String> options, Function(String) onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Row(
+          children: options
+              .map((opt) => Row(
+            children: [
+              Radio<String>(
+                value: opt,
+                groupValue: groupValue,
+                onChanged: (val) => onChanged(val!),
+              ),
+              Text(opt[0].toUpperCase() + opt.substring(1)),
+            ],
+          ))
+              .toList(),
+        ),
+      ],
+    );
+  }
+}
