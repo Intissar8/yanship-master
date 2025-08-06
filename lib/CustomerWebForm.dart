@@ -113,11 +113,11 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
       );
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Auth error: ${e.message}')),
+        SnackBar(content: Text('Auth error: \${e.message}')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text('Error: \$e')),
       );
     } finally {
       setState(() => isLoading = false);
@@ -131,78 +131,90 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(16.0),
             child: Form(
               key: _formKey,
-              child: Wrap(
-                runSpacing: 24,
-                spacing: 24,
-                alignment: WrapAlignment.center,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildCard("Account Info", [
-                    _buildTextField(usernameController, "Username", Icons.person_outline),
-                    _buildTextField(passwordController, "Password", Icons.lock_outline, isPassword: true),
-                    _buildTextField(firstNameController, "First Name", Icons.badge_outlined),
-                    _buildTextField(lastNameController, "Last Name", Icons.badge),
-                    _buildTextField(emailController, "Email", Icons.email_outlined, isEmail: true),
-                    _buildTextField(phoneController, "Phone", Icons.phone, isPhone: true),
-                  ]),
-
-                  _buildCard("Vehicle & Gender", [
-                    _buildTextField(vehicleRegController, "Vehicle Registration", Icons.directions_car),
-                    _buildTextField(vehicleCodeController, "Vehicle Code", Icons.code),
-                    DropdownButtonFormField<String>(
-                      value: selectedGender,
-                      items: ["homme", "femme"]
-                          .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-                          .toList(),
-                      onChanged: (v) => setState(() => selectedGender = v),
-                      validator: (_) => selectedGender == null ? 'Select gender' : null,
-                      decoration: const InputDecoration(labelText: "Gender"),
-                    ),
-                  ]),
-
-                  _buildCard("Addresses", [
-                    ...addressList.map((addr) => Column(
+                  Flexible(
+                    flex: 1,
+                    child: Column(
                       children: [
-                        _buildTextField(addr['address']!, "Address", Icons.home),
-                        _buildTextField(addr['country']!, "Country", Icons.flag),
-                        _buildTextField(addr['city']!, "City", Icons.location_city),
-                        _buildTextField(addr['zip']!, "Zip", Icons.numbers, isNumber: true),
-                        const Divider(),
+                        _buildCard("Account Info", [
+                          _buildTextField(usernameController, "Username", Icons.person_outline),
+                          _buildTextField(passwordController, "Password", Icons.lock_outline, isPassword: true),
+                          _buildTextField(firstNameController, "First Name", Icons.badge_outlined),
+                          _buildTextField(lastNameController, "Last Name", Icons.badge),
+                          _buildTextField(emailController, "Email", Icons.email_outlined, isEmail: true),
+                          _buildTextField(phoneController, "Phone", Icons.phone, isPhone: true),
+                        ]),
+                        const SizedBox(height: 24),
+                        _buildCard("Addresses", [
+                          ...addressList.map((addr) => Column(
+                            children: [
+                              _buildTextField(addr['address']!, "Address", Icons.home),
+                              _buildTextField(addr['country']!, "Country", Icons.flag),
+                              _buildTextField(addr['city']!, "City", Icons.location_city),
+                              _buildTextField(addr['zip']!, "Zip", Icons.numbers, isNumber: true),
+                              const Divider(),
+                            ],
+                          )),
+                          TextButton.icon(
+                            onPressed: addNewAddress,
+                            icon: const Icon(Icons.add, color: Colors.blue),
+                            label: const Text("Add Another Address", style: TextStyle(color: Colors.blue)),
+                          ),
+                        ]),
                       ],
-                    )),
-                    TextButton.icon(
-                      onPressed: addNewAddress,
-                      icon: const Icon(Icons.add, color: Colors.blue),
-                      label: const Text("Add Another Address", style: TextStyle(color: Colors.blue)),
                     ),
-                  ]),
-
-                  _buildCard("Final Info", [
-                    _buildTextField(avatarUrlController, "Avatar URL", Icons.link),
-                    _buildTextField(notesController, "Notes", Icons.note, maxLines: 3, isOptional: true),
-                    _buildRadioGroup("User Status", userStatus, ['active', 'inactive'], (v) => setState(() => userStatus = v)),
-                    _buildRadioGroup("Newsletter", newsletterSub, ['yes', 'no'], (v) => setState(() => newsletterSub = v)),
-                    CheckboxListTile(
-                      title: const Text("Notify user"),
-                      value: notifyUser,
-                      onChanged: (v) => setState(() => notifyUser = v!),
+                  ),
+                  const SizedBox(width: 16),
+                  Flexible(
+                    flex: 1,
+                    child: Column(
+                      children: [
+                        _buildCard("Vehicle Info", [
+                          _buildTextField(vehicleRegController, "Vehicle Registration", Icons.directions_car),
+                          _buildTextField(vehicleCodeController, "Vehicle Code", Icons.code),
+                          DropdownButtonFormField<String>(
+                            value: selectedGender,
+                            items: ["homme", "femme"]
+                                .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                                .toList(),
+                            onChanged: (v) => setState(() => selectedGender = v),
+                            validator: (_) => selectedGender == null ? 'Select gender' : null,
+                            decoration: const InputDecoration(labelText: "Gender"),
+                          ),
+                        ]),
+                        const SizedBox(height: 24),
+                        _buildCard("Final Info", [
+                          _buildTextField(avatarUrlController, "Avatar URL", Icons.link),
+                          _buildTextField(notesController, "Notes", Icons.note, maxLines: 3, isOptional: true),
+                          _buildRadioGroup("User Status", userStatus, ['active', 'inactive'], (v) => setState(() => userStatus = v)),
+                          _buildRadioGroup("Newsletter", newsletterSub, ['yes', 'no'], (v) => setState(() => newsletterSub = v)),
+                          CheckboxListTile(
+                            title: const Text("Notify user"),
+                            value: notifyUser,
+                            onChanged: (v) => setState(() => notifyUser = v!),
+                          ),
+                          const SizedBox(height: 24),
+                          Center(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                              ),
+                              onPressed: isLoading ? null : _submitForm,
+                              child: isLoading
+                                  ? const CircularProgressIndicator(color: Colors.white)
+                                  : const Text("Submit", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                            ),
+                          ),
+                        ]),
+                      ],
                     ),
-                  ]),
-
-                  Center(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                      ),
-                      onPressed: isLoading ? null : _submitForm,
-                      child: isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text("Submit", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -214,8 +226,9 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
 
   Widget _buildCard(String title, List<Widget> children) {
     return Container(
-      width: 450,
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
