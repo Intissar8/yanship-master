@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'models/customer_model.dart';
+import 'models/driver_model.dart';
 
-class CustomerWebForm extends StatefulWidget {
-  const CustomerWebForm({super.key});
+class DriverWebForm extends StatefulWidget {
+  const DriverWebForm({super.key});
 
   @override
-  State<CustomerWebForm> createState() => _CustomerWebFormState();
+  State<DriverWebForm> createState() => _CustomerWebFormState();
 }
 
-class _CustomerWebFormState extends State<CustomerWebForm> {
+class _CustomerWebFormState extends State<DriverWebForm> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController usernameController = TextEditingController();
@@ -68,7 +69,7 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
       'zip': addr['zip']!.text,
     }).toList();
 
-    CustomerModel customer = CustomerModel(
+    DriverModel customer = DriverModel(
       username: usernameController.text,
       password: passwordController.text,
       firstName: firstNameController.text,
@@ -94,7 +95,7 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
       final uid = userCredential.user!.uid;
 
       await FirebaseFirestore.instance
-          .collection('clients')
+          .collection('drivers')
           .doc(uid)
           .set(customer.toJson());
 
@@ -150,7 +151,7 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
                         const Icon(Icons.person, size: 24, color: Colors.blue),
                         const SizedBox(width: 10),
                         Text(
-                          'Add Customer',
+                          'Add Driver',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 20,
