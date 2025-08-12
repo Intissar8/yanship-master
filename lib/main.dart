@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:yanship/register_client_screen.dart';
 import 'package:yanship/register_driver_screen.dart';
 import 'package:yanship/register_screen.dart';
+import 'acceuil.dart';
 import 'add_shipment_screen.dart';
 import 'customer_form1.dart';
 import 'customer_form3.dart';
@@ -34,7 +35,7 @@ void main() async {
 
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
-    home: RegisterDriverScreen(),
+    home: HomePage(),
   ));
 }
 
