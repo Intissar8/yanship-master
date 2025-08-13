@@ -3,7 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AddShipmentScreen extends StatefulWidget {
-  const AddShipmentScreen({super.key});
+  final String? shipmentId; // null = création
+
+  const AddShipmentScreen({Key? key, this.shipmentId}) : super(key: key);
 
   @override
   State<AddShipmentScreen> createState() => _AddShipmentScreenState();
@@ -54,6 +56,50 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
     'Khouribga',
   ];
 
+  bool isEditMode = false;
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.shipmentId != null) {
+      isEditMode = true;
+      _loadShipmentData();
+    }
+  }
+
+  Future<void> _loadShipmentData() async {
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('shipments')
+          .doc(widget.shipmentId)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          selectedCity = data['city'];
+          receiverNameController.text = data['receiverName'] ?? '';
+          addressController.text = data['address'] ?? '';
+          phoneController.text = data['phone'] ?? '';
+          priceController.text = data['price']?.toString() ?? '';
+          dontAuthorize = data['dontAuthorize'] ?? false;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load shipment data: $e")),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   Future<void> submitShipment() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -74,29 +120,44 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
       'dontAuthorize': dontAuthorize,
       'clientId': user.uid,
       'driverId': null,
-      'status': 'pending',
-      'createdAt': FieldValue.serverTimestamp(),
+      'status': isEditMode ? FieldValue.delete() : 'created',
+      'createdAt': isEditMode ? FieldValue.delete() : FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     };
 
-    try {
+    try {if (isEditMode) {
+      // Update existant sans supprimer status ni createdAt
+      await FirebaseFirestore.instance
+          .collection('shipments')
+          .doc(widget.shipmentId)
+          .update({
+        'city': selectedCity,
+        'receiverName': receiverNameController.text.trim(),
+        'address': addressController.text.trim(),
+        'phone': phoneController.text.trim(),
+        'price': priceController.text.trim(),
+        'dontAuthorize': dontAuthorize,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Shipment updated successfully!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+    else {
+      // Création
       await FirebaseFirestore.instance.collection('shipments').add(shipmentData);
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Shipment added successfully!"),
           backgroundColor: Colors.green,
         ),
       );
+    }
 
-      _formKey.currentState!.reset();
-      receiverNameController.clear();
-      addressController.clear();
-      phoneController.clear();
-      priceController.clear();
-      setState(() {
-        selectedCity = null;
-        dontAuthorize = false;
-      });
+    Navigator.of(context).pop(); // Retour au dashboard
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: $e")),
@@ -106,6 +167,12 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
@@ -134,13 +201,13 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                     color: Colors.grey[400],
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.local_shipping_outlined, color: Colors.green),
-                      SizedBox(width: 8),
+                      const Icon(Icons.local_shipping_outlined, color: Colors.green),
+                      const SizedBox(width: 8),
                       Text(
-                        'Add new shipment',
-                        style: TextStyle(
+                        isEditMode ? 'Edit shipment' : 'Add new shipment',
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                           fontSize: 16,
@@ -191,9 +258,9 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                             ),
-                            child: const Text(
-                              'ADD NEW ORDER',
-                              style: TextStyle(
+                            child: Text(
+                              isEditMode ? 'UPDATE ORDER' : 'ADD NEW ORDER',
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
                                 color: Colors.white,
@@ -213,7 +280,6 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
       ),
     );
   }
-
   Widget buildLabeledField(String label, TextEditingController controller,
       [TextInputType inputType = TextInputType.text]) {
     return Column(
@@ -322,3 +388,4 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
     );
   }
 }
+

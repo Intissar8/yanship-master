@@ -8,6 +8,7 @@ import 'acceuil.dart';
 import 'add_shipment_screen.dart';
 import 'customer_form1.dart';
 import 'customer_form3.dart';
+import 'dashboardC.dart';
 import 'driver_form1.dart';
 import 'forgot_password_screen.dart';
 import 'login_screen.dart';
@@ -35,7 +36,7 @@ void main() async {
 
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
-    home: HomePage(),
+    home: ShipmentsListStyled(),
   ));
 }
 
