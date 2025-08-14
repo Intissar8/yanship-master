@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'add_shipment_screen.dart';
-import 'ShipmentDetailsScreen.dart';
 
 class ShipmentsListStyled extends StatefulWidget {
   const ShipmentsListStyled({super.key});
@@ -13,6 +12,7 @@ class ShipmentsListStyled extends StatefulWidget {
 class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
   String searchQuery = "";
   String statusFilter = "";
+  Set<String> expandedRows = {}; // Track expanded rows
 
   @override
   Widget build(BuildContext context) {
@@ -28,92 +28,11 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
         child: Column(
           children: [
             // Top controls row
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AddShipmentScreen()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade800,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text(
-                      "Create New Order",
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _pickupAllConfirmed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text("Pickup", style: TextStyle(color: Colors.white, fontSize: 16)),
-                  ),
-                  const Spacer(),
-                  SizedBox(width: 150, child: _buildSearchField("Tracking ID")),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 200,
-                    child: _buildSearchField("Search Tracking", onChanged: (value) {
-                      setState(() => searchQuery = value.toLowerCase());
-                    }),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.search, color: Colors.white),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onPressed: () {},
-                  ),
-                  const SizedBox(width: 8),
-                  DropdownButton<String>(
-                    value: statusFilter.isEmpty ? null : statusFilter,
-                    hint: const Text("-- Status --"),
-                    underline: const SizedBox(),
-                    items: ["All", "Created", "Pickup", "Confirmed"]
-                        .map((status) => DropdownMenuItem(
-                      value: status == "All" ? "" : status,
-                      child: Text(status),
-                    ))
-                        .toList(),
-                    onChanged: (value) => setState(() => statusFilter = value ?? ""),
-                  ),
-                ],
-              ),
-            ),
+            _buildTopControls(),
+
             const SizedBox(height: 20),
 
-            // Centered and bigger table
+            // List of shipments with proper scroll
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -125,13 +44,17 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text("No shipments found", style: TextStyle(fontSize: 18)));
+                    return const Center(
+                        child: Text("No shipments found", style: TextStyle(fontSize: 18)));
                   }
 
                   final filteredDocs = snapshot.data!.docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     final matchesSearch = searchQuery.isEmpty ||
-                        (data['receiverName'] ?? "").toString().toLowerCase().contains(searchQuery) ||
+                        (data['receiverName'] ?? "")
+                            .toString()
+                            .toLowerCase()
+                            .contains(searchQuery) ||
                         (data['city'] ?? "").toString().toLowerCase().contains(searchQuery);
                     final matchesStatus = statusFilter.isEmpty ||
                         (data['status'] ?? "").toString().trim().toLowerCase() ==
@@ -139,97 +62,182 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                     return matchesSearch && matchesStatus;
                   }).toList();
 
-                  return Center( // centers the table
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 1400), // bigger width for the table
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.shade300,
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
+                  return ListView.builder(
+                    itemCount: filteredDocs.length + 1, // +1 for header row
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        // Header row
+                        return Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          color: Colors.blue.shade100,
+                          child: Row(
+                            children: const [
+                              Expanded(flex: 2, child: Text("Name", style: TextStyle(fontWeight: FontWeight.bold))),
+                              Expanded(flex: 2, child: Text("City", style: TextStyle(fontWeight: FontWeight.bold))),
+                              Expanded(flex: 1, child: Text("Price", style: TextStyle(fontWeight: FontWeight.bold))),
+                              Expanded(flex: 2, child: Text("Status", style: TextStyle(fontWeight: FontWeight.bold))),
+                              Expanded(flex: 3, child: Text("Actions", style: TextStyle(fontWeight: FontWeight.bold))),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          headingRowHeight: 60,
-                          dataRowHeight: 56,
-                          columnSpacing: 50,
-                          headingTextStyle: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: Colors.black87,
-                          ),
-                          dataTextStyle: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black87,
-                          ),
-                          headingRowColor: MaterialStateProperty.all(Colors.blue.shade100),
-                          dataRowColor: MaterialStateProperty.resolveWith<Color?>(
-                                (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.selected)) {
-                                return Colors.blue.withOpacity(0.08);
-                              }
-                              return null;
-                            },
-                          ),
-                          columns: const [
-                            DataColumn(label: Text("Name")),
-                            DataColumn(label: Text("City")),
-                            DataColumn(label: Text("Price")),
-                            DataColumn(label: Text("Status")),
-                            DataColumn(label: Text("Actions")),
-                          ],
-                          rows: filteredDocs.map((doc) {
-                            final data = doc.data() as Map<String, dynamic>;
-                            final status = (data['status'] ?? '').toString();
-                            final statusNormalized = status.toLowerCase().trim();
+                        );
+                      }
 
-                            return DataRow(
-                              cells: [
-                                DataCell(Text(data['receiverName'] ?? "")),
-                                DataCell(Text(data['city'] ?? "")),
-                                DataCell(Text("MAD ${data['price'] ?? ''}")),
-                                DataCell(_buildStatusChip(status)),
-                                DataCell(Row(
-                                  children: [
-                                    if (statusNormalized == 'created' ||
-                                        statusNormalized == 'pickup' ||
-                                        statusNormalized == 'confirmed')
-                                      _buildActionsMenu(doc.id, data, statusNormalized),
-                                    IconButton(
-                                      icon: const Icon(Icons.arrow_forward_ios),
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => ShipmentDetailsScreen(
-                                              shipmentId: doc.id,
-                                              shipmentData: data,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                )),
+                      final doc = filteredDocs[index - 1];
+                      final data = doc.data() as Map<String, dynamic>;
+                      final status = (data['status'] ?? '').toString();
+                      final statusNormalized = status.toLowerCase().trim();
+                      final isExpanded = expandedRows.contains(doc.id);
+
+                      return Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(flex: 2, child: Text(data['receiverName'] ?? "")),
+                                Expanded(flex: 2, child: Text(data['city'] ?? "")),
+                                Expanded(flex: 1, child: Text("MAD ${data['price'] ?? ''}")),
+                                Expanded(flex: 2, child: _buildStatusChip(status)),
+                                Expanded(
+                                  flex: 3,
+                                  child: Row(
+                                    children: [
+                                      if (statusNormalized == 'created' ||
+                                          statusNormalized == 'pickup' ||
+                                          statusNormalized == 'confirmed')
+                                        _buildActionsMenu(doc.id, data, statusNormalized),
+                                      IconButton(
+                                        icon: Icon(
+                                          isExpanded ? Icons.expand_less : Icons.expand_more,
+                                          color: Colors.blueGrey,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            if (isExpanded) {
+                                              expandedRows.remove(doc.id);
+                                            } else {
+                                              expandedRows.add(doc.id);
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
+                            ),
+                          ),
+                          if (isExpanded)
+                            Container(
+                              width: double.infinity,
+                              color: Colors.blue.shade50,
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildDetailRow("Address", data['address'] ?? 'N/A'),
+                                  _buildDetailRow("Phone", data['phone'] ?? 'N/A'),
+                                  _buildDetailRow(
+                                      "Created At", data['createdAt']?.toDate().toString() ?? 'N/A'),
+                                ],
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   );
-
                 },
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTopControls() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AddShipmentScreen()));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade800,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text("Create New Order", style: TextStyle(color: Colors.white, fontSize: 16)),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: _pickupAllConfirmed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black87,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text("Pickup", style: TextStyle(color: Colors.white, fontSize: 16)),
+          ),
+          const Spacer(),
+          SizedBox(width: 150, child: _buildSearchField("Tracking ID")),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 200,
+            child: _buildSearchField("Search Tracking", onChanged: (value) {
+              setState(() => searchQuery = value.toLowerCase());
+            }),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.blue.shade700,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {},
+          ),
+          const SizedBox(width: 8),
+          DropdownButton<String>(
+            value: statusFilter.isEmpty ? null : statusFilter,
+            hint: const Text("-- Status --"),
+            underline: const SizedBox(),
+            items: ["All", "Created", "Pickup", "Confirmed"]
+                .map((status) => DropdownMenuItem(value: status == "All" ? "" : status, child: Text(status)))
+                .toList(),
+            onChanged: (value) => setState(() => statusFilter = value ?? ""),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(child: Text(value)),
+        ],
       ),
     );
   }
