@@ -16,6 +16,8 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
+
     return Scaffold(
       backgroundColor: Colors.blue.shade50,
       appBar: AppBar(
@@ -27,7 +29,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            _buildTopControls(),
+            _buildTopControls(isMobile),
             const SizedBox(height: 20),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
@@ -41,7 +43,8 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return const Center(
-                        child: Text("No shipments found", style: TextStyle(fontSize: 18)));
+                        child: Text("No shipments found",
+                            style: TextStyle(fontSize: 18)));
                   }
 
                   final filteredDocs = snapshot.data!.docs.where((doc) {
@@ -51,100 +54,19 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                             .toString()
                             .toLowerCase()
                             .contains(searchQuery) ||
-                        (data['city'] ?? "").toString().toLowerCase().contains(searchQuery);
+                        (data['city'] ?? "")
+                            .toString()
+                            .toLowerCase()
+                            .contains(searchQuery);
                     final matchesStatus = statusFilter.isEmpty ||
                         (data['status'] ?? "").toString().trim().toLowerCase() ==
                             statusFilter.trim().toLowerCase();
                     return matchesSearch && matchesStatus;
                   }).toList();
 
-                  return ListView.builder(
-                    itemCount: filteredDocs.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          color: Colors.blue.shade100,
-                          child: Row(
-                            children: const [
-                              Expanded(flex: 2, child: Text("Name", style: TextStyle(fontWeight: FontWeight.bold))),
-                              Expanded(flex: 2, child: Text("City", style: TextStyle(fontWeight: FontWeight.bold))),
-                              Expanded(flex: 1, child: Text("Price", style: TextStyle(fontWeight: FontWeight.bold))),
-                              Expanded(flex: 2, child: Text("Status", style: TextStyle(fontWeight: FontWeight.bold))),
-                              Expanded(flex: 3, child: Text("Actions", style: TextStyle(fontWeight: FontWeight.bold))),
-                            ],
-                          ),
-                        );
-                      }
-
-                      final doc = filteredDocs[index - 1];
-                      final data = doc.data() as Map<String, dynamic>;
-                      final status = (data['status'] ?? '').toString();
-                      final statusNormalized = status.toLowerCase().trim();
-                      final isExpanded = expandedRows.contains(doc.id);
-
-                      return Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(flex: 2, child: Text(data['receiverName'] ?? "")),
-                                Expanded(flex: 2, child: Text(data['city'] ?? "")),
-                                Expanded(flex: 1, child: Text("MAD ${data['price'] ?? ''}")),
-                                Expanded(flex: 2, child: _buildStatusChip(status)),
-                                Expanded(
-                                  flex: 3,
-                                  child: Row(
-                                    children: [
-                                      if (statusNormalized == 'created' ||
-                                          statusNormalized == 'pickup' ||
-                                          statusNormalized == 'confirmed')
-                                        _buildActionsMenu(doc.id, data, statusNormalized),
-                                      IconButton(
-                                        icon: Icon(
-                                          isExpanded ? Icons.expand_less : Icons.expand_more,
-                                          color: Colors.blueGrey,
-                                        ),
-                                        onPressed: () {
-                                          setState(() {
-                                            if (isExpanded) {
-                                              expandedRows.remove(doc.id);
-                                            } else {
-                                              expandedRows.add(doc.id);
-                                            }
-                                          });
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (isExpanded)
-                            Container(
-                              width: double.infinity,
-                              color: Colors.blue.shade50,
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildDetailRow("Address", data['address'] ?? 'N/A'),
-                                  _buildDetailRow("Phone", data['phone'] ?? 'N/A'),
-                                  _buildDetailRow(
-                                      "Created At", data['createdAt']?.toDate().toString() ?? 'N/A'),
-                                ],
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                  );
+                  return isMobile
+                      ? _buildMobileView(filteredDocs)
+                      : _buildWebView(filteredDocs); // updated
                 },
               ),
             ),
@@ -154,8 +76,191 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
     );
   }
 
-  /// 🔹 Barre du haut rendue responsive avec Wrap
-  Widget _buildTopControls() {
+  /// MOBILE VERSION (unchanged)
+  Widget _buildMobileView(List<QueryDocumentSnapshot> filteredDocs) {
+    return ListView.builder(
+      itemCount: filteredDocs.length,
+      itemBuilder: (context, index) {
+        final doc = filteredDocs[index];
+        final data = doc.data() as Map<String, dynamic>;
+        final status = (data['status'] ?? '').toString();
+        final statusNormalized = status.toLowerCase().trim();
+        final isExpanded = expandedRows.contains(doc.id);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6.0),
+          child: Card(
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 4,
+            child: Column(
+              children: [
+                ListTile(
+                  title: Text(data['receiverName'] ?? ""),
+                  subtitle: Text("City: ${data['city'] ?? ""}"),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildStatusChip(status),
+                      IconButton(
+                        icon: Icon(
+                          isExpanded ? Icons.expand_less : Icons.expand_more,
+                          color: Colors.blueGrey,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            if (isExpanded) {
+                              expandedRows.remove(doc.id);
+                            } else {
+                              expandedRows.add(doc.id);
+                            }
+                          });
+                        },
+                      ),
+                      if (statusNormalized == 'created' ||
+                          statusNormalized == 'pickup' ||
+                          statusNormalized == 'confirmed')
+                        _buildActionsMenu(doc.id, data, statusNormalized),
+                    ],
+                  ),
+                ),
+                if (isExpanded)
+                  Container(
+                    width: double.infinity,
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    color: Colors.blue.shade50,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDetailRow("Address", data['address'] ?? 'N/A'),
+                        _buildDetailRow("Phone", data['phone'] ?? 'N/A'),
+                        _buildDetailRow(
+                            "Price", "MAD ${data['price'] ?? ''}"),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// WEB VERSION FIXED
+  Widget _buildWebView(List<QueryDocumentSnapshot> filteredDocs) {
+    final tableHeight = MediaQuery.of(context).size.height - 200;
+
+    return SizedBox(
+      height: tableHeight,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Center( // Center table horizontally
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minWidth: 700, // minimum width for table
+              maxWidth: 1200, // maximum width to prevent full stretch
+            ),
+            child: Column(
+              children: List.generate(filteredDocs.length + 1, (index) {
+                if (index == 0) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    color: Colors.blue.shade100,
+                    child: Row(
+                      children: const [
+                        SizedBox(width: 200, child: Text("Name", style: TextStyle(fontWeight: FontWeight.bold))),
+                        SizedBox(width: 150, child: Text("City", style: TextStyle(fontWeight: FontWeight.bold))),
+                        SizedBox(width: 100, child: Text("Price", style: TextStyle(fontWeight: FontWeight.bold))),
+                        SizedBox(width: 150, child: Text("Status", style: TextStyle(fontWeight: FontWeight.bold))),
+                        SizedBox(width: 250, child: Text("Actions", style: TextStyle(fontWeight: FontWeight.bold))),
+                      ],
+                    ),
+                  );
+                }
+
+                final doc = filteredDocs[index - 1];
+                final data = doc.data() as Map<String, dynamic>;
+                final status = (data['status'] ?? '').toString();
+                final statusNormalized = status.toLowerCase().trim();
+                final isExpanded = expandedRows.contains(doc.id);
+
+                return Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(width: 200, child: Text(data['receiverName'] ?? "")),
+                          SizedBox(width: 150, child: Text(data['city'] ?? "")),
+                          SizedBox(width: 100, child: Text("MAD ${data['price'] ?? ''}")),
+                          SizedBox(width: 150, child: _buildStatusChip(status)),
+                          SizedBox(
+                            width: 250,
+                            child: Row(
+                              children: [
+                                if (statusNormalized == 'created' ||
+                                    statusNormalized == 'pickup' ||
+                                    statusNormalized == 'confirmed')
+                                  _buildActionsMenu(doc.id, data, statusNormalized),
+                                IconButton(
+                                  icon: Icon(
+                                    isExpanded ? Icons.expand_less : Icons.expand_more,
+                                    color: Colors.blueGrey,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      if (isExpanded) {
+                                        expandedRows.remove(doc.id);
+                                      } else {
+                                        expandedRows.add(doc.id);
+                                      }
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isExpanded)
+                      Container(
+                        width: double.infinity,
+                        color: Colors.blue.shade50,
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDetailRow("Address", data['address'] ?? 'N/A'),
+                            _buildDetailRow("Phone", data['phone'] ?? 'N/A'),
+                            _buildDetailRow("Created At",
+                                data['createdAt']?.toDate().toString() ?? 'N/A'),
+                          ],
+                        ),
+                      ),
+                  ],
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+
+
+
+  /// Top controls responsive
+  Widget _buildTopControls(bool isMobile) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -172,54 +277,53 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
       child: Wrap(
         runSpacing: 8,
         spacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        alignment: WrapAlignment.spaceBetween,
+        alignment: WrapAlignment.start,
         children: [
           ElevatedButton.icon(
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const AddShipmentScreen()));
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AddShipmentScreen()));
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade800,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 12 : 16, vertical: isMobile ? 10 : 14),
+              shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text("Create New Order", style: TextStyle(color: Colors.white, fontSize: 16)),
+            label: const Text("Create New Order",
+                style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
           ElevatedButton(
             onPressed: _pickupAllConfirmed,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.black87,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 12 : 16, vertical: isMobile ? 10 : 14),
+              shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text("Pickup", style: TextStyle(color: Colors.white, fontSize: 16)),
+            child: const Text("Pickup",
+                style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
           SizedBox(
-            width: 150,
+            width: isMobile ? 120 : 150,
             child: _buildSearchField("Tracking ID"),
           ),
           SizedBox(
-            width: 200,
+            width: isMobile ? 150 : 200,
             child: _buildSearchField("Search Tracking", onChanged: (value) {
               setState(() => searchQuery = value.toLowerCase());
             }),
-          ),
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.blue.shade700,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () {},
           ),
           DropdownButton<String>(
             value: statusFilter.isEmpty ? null : statusFilter,
             hint: const Text("-- Status --"),
             underline: const SizedBox(),
             items: ["All", "Created", "Pickup", "Confirmed"]
-                .map((status) => DropdownMenuItem(value: status == "All" ? "" : status, child: Text(status)))
+                .map((status) => DropdownMenuItem(
+                value: status == "All" ? "" : status, child: Text(status)))
                 .toList(),
             onChanged: (value) => setState(() => statusFilter = value ?? ""),
           ),
@@ -257,14 +361,19 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
     );
   }
 
-  PopupMenuButton<String> _buildActionsMenu(String id, Map<String, dynamic> data, String status) {
+  PopupMenuButton<String> _buildActionsMenu(
+      String id, Map<String, dynamic> data, String status) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.menu),
       onSelected: (selected) async {
         if (selected == 'confirm') {
-          await FirebaseFirestore.instance.collection('shipments').doc(id).update({'status': 'Confirmed'});
+          await FirebaseFirestore.instance
+              .collection('shipments')
+              .doc(id)
+              .update({'status': 'Confirmed'});
         } else if (selected == 'edit') {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => AddShipmentScreen(shipmentId: id)));
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => AddShipmentScreen(shipmentId: id)));
         } else if (selected == 'delete') {
           final confirm = await showDialog<bool>(
             context: context,
@@ -272,8 +381,12 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
               title: const Text('Confirm delete'),
               content: const Text('Are you sure you want to delete this shipment?'),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-                TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
+                TextButton(
+                    onPressed: () => Navigator.pop(c, false),
+                    child: const Text('Cancel')),
+                TextButton(
+                    onPressed: () => Navigator.pop(c, true),
+                    child: const Text('Delete')),
               ],
             ),
           ) ?? false;
@@ -332,7 +445,8 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
         color = Colors.grey;
     }
     return Chip(
-      label: Text(status, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+      label: Text(status,
+          style: TextStyle(color: color, fontWeight: FontWeight.bold)),
       backgroundColor: color.withOpacity(0.15),
     );
   }
