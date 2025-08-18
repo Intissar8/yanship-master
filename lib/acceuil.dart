@@ -1,5 +1,8 @@
 
 import 'package:flutter/material.dart';
+import 'package:yanship/register_screen.dart';
+
+import 'login_screen.dart';
 
 class SafeExpanded extends StatelessWidget {
   final Widget child;
@@ -94,11 +97,28 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                 children: [
                   _NavItem(title: "Home", onTap: () {}),
                   const SizedBox(width: 24),
-                  _NavItem(title: "Sign in", onTap: () {}),
+                  _NavItem(
+                    title: "Sign in",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                    },
+                  ),
                   const SizedBox(width: 24),
-                  _NavItem(title: "Sign Up", onTap: () {}),
+                  _NavItem(
+                    title: "Sign Up",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                      );
+                    },
+                  ),
                 ],
               ),
+
 
           ],
         ),
@@ -166,7 +186,12 @@ class HomeSection extends StatelessWidget {
         ),
         const SizedBox(height: 30),
         ElevatedButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+            );
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF00BDE0),
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 16),
@@ -179,6 +204,7 @@ class HomeSection extends StatelessWidget {
             style: TextStyle(fontSize: 18, color: Colors.white),
           ),
         ),
+
       ],
     );
 
@@ -737,11 +763,15 @@ class _VipPlanCardState extends State<VipPlanCard> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00BDE0),
-                padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
@@ -751,6 +781,7 @@ class _VipPlanCardState extends State<VipPlanCard> {
                 style: TextStyle(fontSize: 16, color: Colors.white),
               ),
             ),
+
           ],
         ),
       ),
@@ -890,11 +921,14 @@ class CustomDrawer extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
         children: [
           ListTile(
-            leading: const Icon(Icons.home_outlined),
+            leading: const Icon(Icons.home),
             title: const Text("Home"),
             onTap: () {
-              Navigator.pop(context); // Ferme le drawer
-              // TODO: scroll to Home
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HomePage()),
+              );
             },
           ),
           const Divider(),
@@ -903,7 +937,10 @@ class CustomDrawer extends StatelessWidget {
             title: const Text("Sign In"),
             onTap: () {
               Navigator.pop(context);
-              // TODO: redirect or scroll
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
             },
           ),
           const Divider(),
@@ -912,9 +949,13 @@ class CustomDrawer extends StatelessWidget {
             title: const Text("Sign Up"),
             onTap: () {
               Navigator.pop(context);
-              // TODO: redirect or scroll
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RegisterScreen()),
+              );
             },
           ),
+
         ],
       ),
     );

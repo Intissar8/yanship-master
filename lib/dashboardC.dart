@@ -12,7 +12,7 @@ class ShipmentsListStyled extends StatefulWidget {
 class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
   String searchQuery = "";
   String statusFilter = "";
-  Set<String> expandedRows = {}; // Track expanded rows
+  Set<String> expandedRows = {};
 
   @override
   Widget build(BuildContext context) {
@@ -27,12 +27,8 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            // Top controls row
             _buildTopControls(),
-
             const SizedBox(height: 20),
-
-            // List of shipments with proper scroll
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -63,10 +59,9 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                   }).toList();
 
                   return ListView.builder(
-                    itemCount: filteredDocs.length + 1, // +1 for header row
+                    itemCount: filteredDocs.length + 1,
                     itemBuilder: (context, index) {
                       if (index == 0) {
-                        // Header row
                         return Container(
                           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                           color: Colors.blue.shade100,
@@ -159,6 +154,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
     );
   }
 
+  /// 🔹 Barre du haut rendue responsive avec Wrap
   Widget _buildTopControls() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -173,7 +169,11 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
           ),
         ],
       ),
-      child: Row(
+      child: Wrap(
+        runSpacing: 8,
+        spacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        alignment: WrapAlignment.spaceBetween,
         children: [
           ElevatedButton.icon(
             onPressed: () {
@@ -187,7 +187,6 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
             icon: const Icon(Icons.add, color: Colors.white),
             label: const Text("Create New Order", style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
-          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: _pickupAllConfirmed,
             style: ElevatedButton.styleFrom(
@@ -197,16 +196,16 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
             ),
             child: const Text("Pickup", style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
-          const Spacer(),
-          SizedBox(width: 150, child: _buildSearchField("Tracking ID")),
-          const SizedBox(width: 8),
+          SizedBox(
+            width: 150,
+            child: _buildSearchField("Tracking ID"),
+          ),
           SizedBox(
             width: 200,
             child: _buildSearchField("Search Tracking", onChanged: (value) {
               setState(() => searchQuery = value.toLowerCase());
             }),
           ),
-          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white),
             style: IconButton.styleFrom(
@@ -215,7 +214,6 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
             ),
             onPressed: () {},
           ),
-          const SizedBox(width: 8),
           DropdownButton<String>(
             value: statusFilter.isEmpty ? null : statusFilter,
             hint: const Text("-- Status --"),
@@ -278,8 +276,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                 TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
               ],
             ),
-          ) ??
-              false;
+          ) ?? false;
           if (confirm) {
             await FirebaseFirestore.instance.collection('shipments').doc(id).delete();
           }

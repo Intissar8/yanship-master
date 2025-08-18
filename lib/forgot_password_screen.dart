@@ -2,13 +2,87 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
 
-class ForgotPasswordScreen extends StatelessWidget {
+class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final TextEditingController emailController = TextEditingController();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+}
 
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final TextEditingController emailController = TextEditingController();
+  bool isLoading = false;
+
+  Future<void> _resetPassword() async {
+    final email = emailController.text.trim();
+
+    if (email.isEmpty) {
+      _showMessage("Missing Email", "Please enter your email address.");
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      // 🔹 Check if the email exists
+      final methods =
+      await FirebaseAuth.instance.fetchSignInMethodsForEmail(email);
+
+      if (methods.isEmpty) {
+        // Email not found
+        _showMessage("Email Not Found", "No account is registered with $email");
+        setState(() => isLoading = false);
+        return;
+      }
+
+      // 🔹 If it exists, send reset link
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text("Email Sent"),
+          content: Text("A reset link has been sent to $email"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+              child: const Text("Go to Login"),
+            )
+          ],
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      _showMessage("Error", e.message ?? "An error occurred.");
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _showMessage(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          )
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: LayoutBuilder(
@@ -18,9 +92,11 @@ class ForgotPasswordScreen extends StatelessWidget {
           return Center(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32),
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isWide ? 500 : double.infinity),
+                  constraints: BoxConstraints(
+                      maxWidth: isWide ? 500 : double.infinity),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -75,65 +151,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () async {
-                            final email = emailController.text.trim();
-
-                            if (email.isEmpty) {
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: const Text("Missing Email"),
-                                  content: const Text("Please enter your email address."),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text("OK"),
-                                    )
-                                  ],
-                                ),
-                              );
-                              return;
-                            }
-
-                            try {
-                              await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (_) => AlertDialog(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  title: const Text("Email Sent"),
-                                  content: Text("A reset link has been sent to $email"),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop(); // Close dialog
-                                        Navigator.of(context).pushReplacement(
-                                          MaterialPageRoute(builder: (_) => LoginScreen()),
-                                        );
-                                      },
-                                      child: const Text("Go to Login"),
-                                    )
-                                  ],
-                                ),
-                              );
-                            } on FirebaseAuthException catch (e) {
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: const Text("Error"),
-                                  content: Text(e.message ?? "An error occurred."),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text("Close"),
-                                    )
-                                  ],
-                                ),
-                              );
-                            }
-                          },
+                          onPressed: isLoading ? null : _resetPassword,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF3F7AF0),
                             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -141,7 +159,17 @@ class ForgotPasswordScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: const Text(
+                          child: isLoading
+                              ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                              AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          )
+                              : const Text(
                             'Submit Request',
                             style: TextStyle(
                               fontSize: 16,
