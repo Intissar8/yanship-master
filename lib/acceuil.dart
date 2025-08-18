@@ -515,11 +515,30 @@ class FeaturesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
 
+    final features = const [
+      FeatureCard(
+        icon: Icons.settings,
+        title: "We offer all in one pack",
+        description:
+        "No need to distracting between a lot of services we give you a complete pack. Just scale it.!",
+      ),
+      FeatureCard(
+        icon: Icons.local_shipping,
+        title: "Fast shipping",
+        description:
+        "Our delivery time to all morocco with an average time of 24H. Yalla.!",
+      ),
+      FeatureCard(
+        icon: Icons.attach_money,
+        title: "24H payment",
+        description:
+        "We send payments daily so there is no late cash flow. Money ringtone.!",
+      ),
+    ];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 60.0, vertical: 50),
       child: Column(
-        crossAxisAlignment:
-        isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
         children: [
           const Text(
             "From supplier or picking up from your door to delivered and money back to you in 24H.",
@@ -532,36 +551,31 @@ class FeaturesSection extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
-          Wrap(
-            spacing: 40,
-            runSpacing: 40,
-            alignment: WrapAlignment.center,
-            children: const [
-              FeatureCard(
-                icon: Icons.settings,
-                title: "We offer all in one pack",
-                description:
-                "No need to distracting between a lot of services we give you a complete pack. Just scale it.!",
+
+          // ✅ If mobile → horizontal scroll, else Wrap
+          if (isMobile)
+            SizedBox(
+              height: 320,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: features.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 20),
+                itemBuilder: (context, index) => features[index],
               ),
-              FeatureCard(
-                icon: Icons.local_shipping,
-                title: "Fast shipping",
-                description:
-                "Our delivery time to all morocco with an average time of 24H. Yalla.!",
-              ),
-              FeatureCard(
-                icon: Icons.attach_money,
-                title: "24H payment",
-                description:
-                "We send payments daily so there is no late cash flow. Money ringtone.!",
-              ),
-            ],
-          ),
+            )
+          else
+            Wrap(
+              spacing: 40,
+              runSpacing: 40,
+              alignment: WrapAlignment.center,
+              children: features,
+            ),
         ],
       ),
     );
   }
 }
+
 
 class FeatureCard extends StatelessWidget {
   final IconData icon;
@@ -614,69 +628,80 @@ class VipPlansSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
+
+    final plans = const [
+      VipPlanCard(
+        title: "Silver",
+        price: "10",
+        orders: "50 ORDERS DELIVERED OR LESS / PER MONTH",
+        imageAsset: 'assets/images/silver.png',
+      ),
+      VipPlanCard(
+        title: "Gold",
+        price: "9",
+        orders: "+50 ORDERS / PER MONTH",
+        imageAsset: 'assets/images/gold.png',
+      ),
+      VipPlanCard(
+        title: "Platinum",
+        price: "7",
+        orders: "+100 ORDERS / PER MONTH",
+        imageAsset: 'assets/images/platinum.png',
+      ),
+    ];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 60.0, vertical: 50),
       child: Column(
-        crossAxisAlignment:
-        isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
         children: [
-          const Center(
-            child: Column(
-              children: [
-                Text(
-                  "VIP plans",
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF222222),
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  "Optionally for sellers\nCover all the country with average delivery time of 3h.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 18,
-                    height: 1.6,
-                    color: Color(0xFF4F4F4F),
-                  ),
-                ),
-              ],
+          const Text(
+            "VIP plans",
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF222222),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            "Optionally for sellers\nCover all the country with average delivery time of 3h.",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              height: 1.6,
+              color: Color(0xFF4F4F4F),
             ),
           ),
           const SizedBox(height: 40),
-          Center(
-            child: Wrap(
+
+          // ✅ Mobile → PageView with enough height
+          if (isMobile)
+            SizedBox(
+              height: 520, // enough space for the whole card (no overflow)
+              child: PageView.builder(
+                controller: PageController(viewportFraction: 0.85),
+                itemCount: plans.length,
+                itemBuilder: (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: plans[index],
+                ),
+              ),
+            )
+          else
+            Wrap(
               spacing: 30,
               runSpacing: 30,
               alignment: WrapAlignment.center,
-              children: const [
-                VipPlanCard(
-                  title: "Silver",
-                  price: "10",
-                  orders: "50 ORDERS DELIVERED OR LESS / PER MONTH",
-                  imageAsset: 'assets/images/silver.png',
-                ),
-                VipPlanCard(
-                  title: "Gold",
-                  price: "9",
-                  orders: "+50 ORDERS / PER MONTH",
-                  imageAsset: 'assets/images/gold.png',
-                ),
-                VipPlanCard(
-                  title: "Platinum",
-                  price: "7",
-                  orders: "+100 ORDERS / PER MONTH",
-                  imageAsset: 'assets/images/platinum.png',
-                ),
-              ],
+              children: plans,
             ),
-          ),
         ],
       ),
     );
   }
 }
+
+
 
 
 class VipPlanCard extends StatefulWidget {
