@@ -3,6 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'models/customer_model.dart';
 
+// 🔴 new imports
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class CustomerWebForm extends StatefulWidget {
   const CustomerWebForm({super.key});
 
@@ -25,12 +32,16 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
 
   List<Map<String, TextEditingController>> addressList = [];
 
-  final TextEditingController avatarUrlController = TextEditingController();
+  // 🔴 instead of avatarUrlController
+  String? avatarBase64;
+
   final TextEditingController notesController = TextEditingController();
   String userStatus = 'active';
   String newsletterSub = 'yes';
   bool notifyUser = false;
   bool isLoading = false;
+
+  final ImagePicker _picker = ImagePicker(); // 🔴 picker instance
 
   @override
   void initState() {
@@ -47,6 +58,21 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
         'zip': TextEditingController(),
       });
     });
+  }
+
+  // 🔴 pick & convert to base64
+  Future<void> _pickImage() async {
+    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+
+    if (kIsWeb) {
+      Uint8List bytes = await pickedFile.readAsBytes();
+      setState(() => avatarBase64 = base64Encode(bytes));
+    } else {
+      File file = File(pickedFile.path);
+      Uint8List bytes = await file.readAsBytes();
+      setState(() => avatarBase64 = base64Encode(bytes));
+    }
   }
 
   Future<void> _submitForm() async {
@@ -79,7 +105,7 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
       vehicleCode: vehicleCodeController.text,
       gender: selectedGender!,
       addresses: addresses,
-      avatarUrl: avatarUrlController.text,
+      avatarUrl: avatarBase64 ?? "", // ✅ empty string if no image
       notes: notesController.text,
       status: userStatus,
       newsletter: newsletterSub,
@@ -113,11 +139,11 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
       );
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Auth error: \${e.message ?? e.code}')),
+        SnackBar(content: Text('Auth error: ${e.message ?? e.code}')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: \$e')),
+        SnackBar(content: Text('Error: $e')),
       );
     } finally {
       setState(() => isLoading = false);
@@ -219,7 +245,26 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
                             ]),
                             const SizedBox(height: 24),
                             _buildCard("Final Info", [
-                              _buildTextField(avatarUrlController, "Avatar URL", Icons.link),
+                              // 🔴 avatar picker & preview
+                              Column(
+                                children: [
+                                  GestureDetector(
+                                    onTap: _pickImage,
+                                    child: CircleAvatar(
+                                      radius: 40,
+                                      backgroundImage: avatarBase64 != null
+                                          ? MemoryImage(base64Decode(avatarBase64!))
+                                          : null,
+                                      child: avatarBase64 == null
+                                          ? const Icon(Icons.camera_alt, size: 32)
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text("Tap to upload profile picture"),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
                               _buildTextField(notesController, "Notes", Icons.note, maxLines: 3, isOptional: true),
                               _buildRadioGroup("User Status", userStatus, ['active', 'inactive'], (v) => setState(() => userStatus = v)),
                               _buildRadioGroup("Newsletter", newsletterSub, ['yes', 'no'], (v) => setState(() => newsletterSub = v)),
@@ -304,14 +349,11 @@ class _CustomerWebFormState extends State<CustomerWebForm> {
         validator: (value) {
           if (isOptional) return null;
           if (value == null || value.isEmpty) return 'Required';
-          if (isEmail && !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value))
-            return 'Invalid email';
+          if (isEmail && !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value)) return 'Invalid email';
 
-          if (isPhone && !RegExp(r'^\d{9}$').hasMatch(value))
-            return '9-digit phone required';
+          if (isPhone && !RegExp(r'^\d{9}$').hasMatch(value)) return '9-digit phone required';
 
-          if (isPassword && value.length < 6)
-            return 'Minimum 6 characters';
+          if (isPassword && value.length < 6) return 'Minimum 6 characters';
 
           return null;
         },

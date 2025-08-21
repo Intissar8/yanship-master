@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:yanship/register_client_screen.dart';
+import 'package:yanship/register_driver_screen.dart';
 import 'add_shipment_screen.dart';
 import 'dashboardC.dart';
 import 'forgot_password_screen.dart';
@@ -46,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const RegisterClientScreen()),
+          MaterialPageRoute(builder: (_) => const RegisterDriverScreen()),
         );
         return;
       }

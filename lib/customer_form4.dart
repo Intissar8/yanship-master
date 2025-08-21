@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'models/customer_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,10 +22,12 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
   String newsletterSub = 'yes';
   bool notifyUser = false;
 
-  final TextEditingController avatarUrlController = TextEditingController();
+  String? avatarBase64;
   final TextEditingController notesController = TextEditingController();
 
   bool _isLoading = false;
+
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -30,21 +35,36 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
     userStatus = widget.customer.status;
     newsletterSub = widget.customer.newsletter;
     notifyUser = widget.customer.notify;
-    avatarUrlController.text = widget.customer.avatarUrl;
+    avatarBase64 = widget.customer.avatarUrl; // can be null
     notesController.text = widget.customer.notes;
   }
 
   @override
   void dispose() {
-    avatarUrlController.dispose();
     notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 600,
+      maxHeight: 600,
+      imageQuality: 80,
+    );
+
+    if (image != null) {
+      final bytes = await File(image.path).readAsBytes();
+      setState(() {
+        avatarBase64 = base64Encode(bytes);
+      });
+    }
   }
 
   Future<void> _showSuccessDialog() async {
     return showDialog<void>(
       context: context,
-      barrierDismissible: false, // User must tap button
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -66,8 +86,8 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
             TextButton(
               child: Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
               onPressed: () {
-                Navigator.pop(context); // Close dialog
-                Navigator.popUntil(context, (route) => route.isFirst); // Back to first screen
+                Navigator.pop(context);
+                Navigator.popUntil(context, (route) => route.isFirst);
               },
             ),
           ],
@@ -78,15 +98,19 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
+    if (avatarBase64 == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please upload an avatar')),
+      );
+      return;
+    }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     final updatedCustomer = widget.customer.copyWith(
       status: userStatus,
       newsletter: newsletterSub,
-      avatarUrl: avatarUrlController.text,
+      avatarUrl: avatarBase64!,
       notes: notesController.text,
       notify: notifyUser,
     );
@@ -106,7 +130,6 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
           .set(updatedCustomer.toJson());
 
       await _showSuccessDialog();
-
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Authentication Error: ${e.message}')),
@@ -116,9 +139,7 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
         SnackBar(content: Text('Error: $e')),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -242,19 +263,28 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
                           ],
                         ),
 
-                        // Avatar
+                        // Avatar Picker
                         buildLabel("User Avatar"),
-                        TextFormField(
-                          controller: avatarUrlController,
-                          validator: (value) =>
-                          value == null || value.isEmpty ? 'Please insert a URL' : null,
-                          decoration: InputDecoration(
-                            prefixIcon: Icon(Icons.link, color: Colors.black54),
-                            hintText: 'Insert the URL for your avatar',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        Center(
+                          child: Column(
+                            children: [
+                              avatarBase64 != null
+                                  ? CircleAvatar(
+                                radius: 50,
+                                backgroundImage: MemoryImage(base64Decode(avatarBase64!)),
+                              )
+                                  : CircleAvatar(
+                                radius: 50,
+                                backgroundColor: Colors.grey.shade300,
+                                child: Icon(Icons.person, size: 50, color: Colors.white),
+                              ),
+                              SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: _pickImage,
+                                icon: Icon(Icons.upload),
+                                label: Text("Upload Avatar"),
+                              ),
+                            ],
                           ),
                         ),
                         SizedBox(height: 16),
@@ -293,12 +323,12 @@ class _AddCustomerFinalFormState extends State<customer_form4> {
                             OutlinedButton(
                               onPressed: () {
                                 _formKey.currentState!.reset();
-                                avatarUrlController.clear();
                                 notesController.clear();
                                 setState(() {
                                   notifyUser = false;
                                   userStatus = 'active';
                                   newsletterSub = 'yes';
+                                  avatarBase64 = null;
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
