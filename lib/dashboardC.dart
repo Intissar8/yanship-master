@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'CustomerProfileScreen.dart';
 import 'add_shipment_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 
 class ShipmentsListStyled extends StatefulWidget {
@@ -19,6 +21,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
+    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: Colors.blue.shade50,
@@ -35,10 +38,12 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
             const SizedBox(height: 20),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
+
                 stream: FirebaseFirestore.instance
                     .collection('shipments')
-                    .orderBy('createdAt', descending: true)
+                    .where('clientId', isEqualTo: user!.uid)   // 🔑 on filtre
                     .snapshots(),
+
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
