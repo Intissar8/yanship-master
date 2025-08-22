@@ -3,6 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'CustomerProfileScreen.dart';
 import 'add_shipment_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'acceuil.dart';
+import 'dart:typed_data';
+import 'dart:convert';
+
 
 
 
@@ -29,7 +33,89 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
         title: const Text("Dashboard Customer"),
         backgroundColor: Colors.blue.shade800,
         elevation: 2,
+        actions: [
+          PopupMenuButton<String>(
+            offset: const Offset(0, 50),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onSelected: (value) async {
+              if (value == 'profile') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CustomerProfileScreen()),
+                );
+              } else if (value == 'logout') {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomePage()),
+                );
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text("View Profile"),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text("Logout"),
+                  ],
+                ),
+              ),
+            ],
+            // 👉 Ici on affiche l’avatar du client s’il existe
+            child: FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('clients')
+                  .doc(FirebaseAuth.instance.currentUser!.uid)
+                  .get(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: CircleAvatar(
+                      child: Icon(Icons.person),
+                    ),
+                  );
+                }
+
+                final data = snapshot.data!.data() as Map<String, dynamic>?;
+                Uint8List? avatarBytes;
+                if (data != null &&
+                    data['avatarUrl'] != null &&
+                    data['avatarUrl'].toString().isNotEmpty) {
+                  try {
+                    avatarBytes = base64Decode(data['avatarUrl']);
+                  } catch (_) {}
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white,
+                    backgroundImage:
+                    avatarBytes != null ? MemoryImage(avatarBytes) : null,
+                    child: avatarBytes == null
+                        ? Icon(Icons.person, color: Colors.blue.shade800)
+                        : null,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
+
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(

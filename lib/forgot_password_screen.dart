@@ -24,27 +24,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => isLoading = true);
 
     try {
-      // 🔹 Check if the email exists
-      final methods =
-      await FirebaseAuth.instance.fetchSignInMethodsForEmail(email);
-
-      if (methods.isEmpty) {
-        // Email not found
-        _showMessage("Email Not Found", "No account is registered with $email");
-        setState(() => isLoading = false);
-        return;
-      }
-
-      // 🔹 If it exists, send reset link
+      // 🔹 Firebase-safe password reset
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
+      // Neutral message: works for both existing and non-existing emails
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text("Email Sent"),
-          content: Text("A reset link has been sent to $email"),
+          content: Text(
+              "If an account exists for $email, a password reset link has been sent."),
           actions: [
             TextButton(
               onPressed: () {
@@ -54,7 +45,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 );
               },
               child: const Text("Go to Login"),
-            )
+            ),
           ],
         ),
       );
@@ -75,7 +66,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("OK"),
-          )
+          ),
         ],
       ),
     );
