@@ -1,9 +1,6 @@
-
 import 'package:flutter/material.dart';
-import 'package:yanship/register_screen.dart';
-
+import 'register_screen.dart';
 import 'login_screen.dart';
-
 class SafeExpanded extends StatelessWidget {
   final Widget child;
   final int flex;
@@ -60,6 +57,7 @@ class HomePage extends StatelessWidget {
   }
 }
 
+
 class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
   const CustomNavbar({super.key});
 
@@ -74,67 +72,66 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.white,
       elevation: 4,
       toolbarHeight: 80,
-      automaticallyImplyLeading: false, // ✅ supprime hamburger auto
       titleSpacing: 0,
+      automaticallyImplyLeading: false, // 🚫 enlève le hamburger
       title: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Row(
           children: [
+            // 🔹 Logo
             GestureDetector(
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const HomePage()),
-                );
-              },
+              onTap: () {},
               child: Image.asset(
                 'assets/images/logo.png',
                 height: 55,
               ),
             ),
+
             const Spacer(),
 
-            // 🔹 Desktop : texte
+            // 🔹 Desktop → texte
             if (!isMobile)
               Row(
                 children: [
-                  _NavItem(title: "Home", onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HomePage()),
-                    );
-                  }),
+                  _NavItem(title: "Home", onTap: () {}),
                   const SizedBox(width: 24),
-                  _NavItem(title: "Sign in", onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
-                  }),
+                  _NavItem(
+                    title: "Sign in",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                    },
+                  ),
                   const SizedBox(width: 24),
-                  _NavItem(title: "Sign up", onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                    );
-                  }),
+                  _NavItem(
+                    title: "Sign Up",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const RegisterScreen()),
+                      );
+                    },
+                  ),
                 ],
-              )
-            // 🔹 Mobile : icônes
-            else
+              ),
+
+            // 🔹 Mobile → icônes
+            if (isMobile)
               Row(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.home, color: Colors.black87),
+                    tooltip: "Home",
                     onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const HomePage()),
-                      );
+                      // Action Home
                     },
                   ),
                   IconButton(
                     icon: const Icon(Icons.login, color: Colors.black87),
+                    tooltip: "Sign in",
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -144,10 +141,12 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                   IconButton(
                     icon: const Icon(Icons.person_add, color: Colors.black87),
+                    tooltip: "Sign up",
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const RegisterScreen()),
                       );
                     },
                   ),
@@ -160,6 +159,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
+// 🔹 Widget pour un lien texte (Desktop)
 class _NavItem extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
@@ -168,23 +168,19 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Color(0xFF222222),
-            fontWeight: FontWeight.w500,
-          ),
+    return InkWell(
+      onTap: onTap,
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.black87,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
   }
 }
-
 
 
 class HomeSection extends StatelessWidget {
@@ -219,12 +215,7 @@ class HomeSection extends StatelessWidget {
         ),
         const SizedBox(height: 30),
         ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RegisterScreen()),
-            );
-          },
+          onPressed: () {},
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF00BDE0),
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 16),
@@ -237,7 +228,6 @@ class HomeSection extends StatelessWidget {
             style: TextStyle(fontSize: 18, color: Colors.white),
           ),
         ),
-
       ],
     );
 
@@ -548,30 +538,11 @@ class FeaturesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
 
-    final features = const [
-      FeatureCard(
-        icon: Icons.settings,
-        title: "We offer all in one pack",
-        description:
-        "No need to distracting between a lot of services we give you a complete pack. Just scale it.!",
-      ),
-      FeatureCard(
-        icon: Icons.local_shipping,
-        title: "Fast shipping",
-        description:
-        "Our delivery time to all morocco with an average time of 24H. Yalla.!",
-      ),
-      FeatureCard(
-        icon: Icons.attach_money,
-        title: "24H payment",
-        description:
-        "We send payments daily so there is no late cash flow. Money ringtone.!",
-      ),
-    ];
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 60.0, vertical: 50),
       child: Column(
+        crossAxisAlignment:
+        isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
         children: [
           const Text(
             "From supplier or picking up from your door to delivered and money back to you in 24H.",
@@ -584,31 +555,36 @@ class FeaturesSection extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
-
-          // ✅ If mobile → horizontal scroll, else Wrap
-          if (isMobile)
-            SizedBox(
-              height: 320,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: features.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 20),
-                itemBuilder: (context, index) => features[index],
+          Wrap(
+            spacing: 40,
+            runSpacing: 40,
+            alignment: WrapAlignment.center,
+            children: const [
+              FeatureCard(
+                icon: Icons.settings,
+                title: "We offer all in one pack",
+                description:
+                "No need to distracting between a lot of services we give you a complete pack. Just scale it.!",
               ),
-            )
-          else
-            Wrap(
-              spacing: 40,
-              runSpacing: 40,
-              alignment: WrapAlignment.center,
-              children: features,
-            ),
+              FeatureCard(
+                icon: Icons.local_shipping,
+                title: "Fast shipping",
+                description:
+                "Our delivery time to all morocco with an average time of 24H. Yalla.!",
+              ),
+              FeatureCard(
+                icon: Icons.attach_money,
+                title: "24H payment",
+                description:
+                "We send payments daily so there is no late cash flow. Money ringtone.!",
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
-
 
 class FeatureCard extends StatelessWidget {
   final IconData icon;
@@ -661,80 +637,69 @@ class VipPlansSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
-
-    final plans = const [
-      VipPlanCard(
-        title: "Silver",
-        price: "10",
-        orders: "50 ORDERS DELIVERED OR LESS / PER MONTH",
-        imageAsset: 'assets/images/silver.png',
-      ),
-      VipPlanCard(
-        title: "Gold",
-        price: "9",
-        orders: "+50 ORDERS / PER MONTH",
-        imageAsset: 'assets/images/gold.png',
-      ),
-      VipPlanCard(
-        title: "Platinum",
-        price: "7",
-        orders: "+100 ORDERS / PER MONTH",
-        imageAsset: 'assets/images/platinum.png',
-      ),
-    ];
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 60.0, vertical: 50),
       child: Column(
+        crossAxisAlignment:
+        isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
         children: [
-          const Text(
-            "VIP plans",
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF222222),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            "Optionally for sellers\nCover all the country with average delivery time of 3h.",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18,
-              height: 1.6,
-              color: Color(0xFF4F4F4F),
+          const Center(
+            child: Column(
+              children: [
+                Text(
+                  "VIP plans",
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF222222),
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  "Optionally for sellers\nCover all the country with average delivery time of 3h.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    height: 1.6,
+                    color: Color(0xFF4F4F4F),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 40),
-
-          // ✅ Mobile → PageView with enough height
-          if (isMobile)
-            SizedBox(
-              height: 520, // enough space for the whole card (no overflow)
-              child: PageView.builder(
-                controller: PageController(viewportFraction: 0.85),
-                itemCount: plans.length,
-                itemBuilder: (context, index) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: plans[index],
-                ),
-              ),
-            )
-          else
-            Wrap(
+          Center(
+            child: Wrap(
               spacing: 30,
               runSpacing: 30,
               alignment: WrapAlignment.center,
-              children: plans,
+              children: const [
+                VipPlanCard(
+                  title: "Silver",
+                  price: "10",
+                  orders: "50 ORDERS DELIVERED OR LESS / PER MONTH",
+                  imageAsset: 'assets/images/silver.png',
+                ),
+                VipPlanCard(
+                  title: "Gold",
+                  price: "9",
+                  orders: "+50 ORDERS / PER MONTH",
+                  imageAsset: 'assets/images/gold.png',
+                ),
+                VipPlanCard(
+                  title: "Platinum",
+                  price: "7",
+                  orders: "+100 ORDERS / PER MONTH",
+                  imageAsset: 'assets/images/platinum.png',
+                ),
+              ],
             ),
+          ),
         ],
       ),
     );
   }
 }
-
-
 
 
 class VipPlanCard extends StatefulWidget {
@@ -821,15 +786,11 @@ class _VipPlanCardState extends State<VipPlanCard> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                );
-              },
+              onPressed: () {},
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00BDE0),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
@@ -839,7 +800,6 @@ class _VipPlanCardState extends State<VipPlanCard> {
                 style: TextStyle(fontSize: 16, color: Colors.white),
               ),
             ),
-
           ],
         ),
       ),
@@ -964,6 +924,48 @@ class _ContactSectionState extends State<ContactSection> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class CustomDrawer extends StatelessWidget {
+  const CustomDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+        children: [
+          ListTile(
+            leading: const Icon(Icons.home_outlined),
+            title: const Text("Home"),
+            onTap: () {
+              Navigator.pop(context); // Ferme le drawer
+              // TODO: scroll to Home
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.login),
+            title: const Text("Sign In"),
+            onTap: () {
+              Navigator.pop(context);
+              // TODO: redirect or scroll
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.person_add),
+            title: const Text("Sign Up"),
+            onTap: () {
+              Navigator.pop(context);
+              // TODO: redirect or scroll
+            },
+          ),
+        ],
+      ),
     );
   }
 }
