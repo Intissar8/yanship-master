@@ -6,8 +6,99 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 
+String _t(String key, String lang) {
+  switch (lang) {
+    case 'fr':
+      return {
+        "client_profile": "Profil Client",
+        "upload_photo": "Télécharger la photo",
+        "personal_info": "👤 Informations personnelles",
+        "vehicle_info": "🚗 Informations du véhicule",
+        "settings": "⚙️ Paramètres",
+        "enable_notifications": "Activer les notifications",
+        "newsletter_subscription": "Abonnement à la newsletter",
+        "save_changes": "Enregistrer les modifications",
+        "back_to_dashboard": "Retour au tableau de bord",
+        "required": "Champ obligatoire",
+        "invalid_email": "Email invalide",
+        "yes": "Oui",
+        "no": "Non",
+        "username": "Nom d'utilisateur",
+        "first_name": "Prénom",
+        "last_name": "Nom de famille",
+        "email": "Email",
+        "phone": "Téléphone",
+        "gender": "Genre",
+        "vehicle_code": "Code du véhicule",
+        "vehicle_reg": "Immatriculation",
+        "addresses": "📍 Adresses",
+        "gender_label": "Genre",
+        "vehicle_label": "Véhicule",
+      }[key] ?? key;
+
+    case 'ar':
+      return {
+        "client_profile": "ملف العميل",
+        "upload_photo": "رفع الصورة",
+        "personal_info": " 👤المعلومات الشخصية",
+        "vehicle_info": " 🚗معلومات السيارة ",
+        "settings": " ⚙️الإعدادات",
+        "enable_notifications": "تفعيل الإشعارات",
+        "newsletter_subscription": "الاشتراك في النشرة",
+        "save_changes": "حفظ التغييرات",
+        "back_to_dashboard": "العودة للوحة التحكم",
+        "required": "مطلوب",
+        "invalid_email": "البريد الإلكتروني غير صالح",
+        "yes": "نعم",
+        "no": "لا",
+        "username": "اسم المستخدم",
+        "first_name": "الاسم الأول",
+        "last_name": "اسم العائلة",
+        "email": "البريد الإلكتروني",
+        "phone": "الهاتف",
+        "gender": "الجنس",
+        "vehicle_code": "رمز السيارة",
+        "vehicle_reg": "تسجيل السيارة",
+        "addresses": "📍 العناوين",
+        "gender_label": "الجنس",
+        "vehicle_label": "المركبة",
+      }[key] ?? key;
+
+    default: // English
+      return {
+        "client_profile": "Client Profile",
+        "upload_photo": "Upload Photo",
+        "personal_info": "👤 Personal Information",
+        "vehicle_info": "🚗 Vehicle Information",
+        "settings": "⚙️ Settings",
+        "enable_notifications": "Enable Notifications",
+        "newsletter_subscription": "Newsletter Subscription",
+        "save_changes": "Save Changes",
+        "back_to_dashboard": "Back to Dashboard",
+        "required": "Required",
+        "invalid_email": "Invalid email",
+        "yes": "Yes",
+        "no": "No",
+        "username": "Username",
+        "first_name": "First Name",
+        "last_name": "Last Name",
+        "email": "Email",
+        "phone": "Phone",
+        "gender": "Gender",
+        "vehicle_code": "Vehicle Code",
+        "vehicle_reg": "Vehicle Reg",
+        "addresses": "📍 Addresses",
+        "gender_label": "Gender",
+        "vehicle_label": "Vehicle",
+      }[key] ?? key;
+  }
+}
+
+
+
 class CustomerProfileScreen extends StatefulWidget {
-  const CustomerProfileScreen({super.key});
+  final String currentLang;
+  const CustomerProfileScreen({super.key, this.currentLang = 'en'});
 
   @override
   State<CustomerProfileScreen> createState() => _CustomerProfileScreenState();
@@ -143,7 +234,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Client Profile"),
+        automaticallyImplyLeading: false,
+        title:  Text(_t("client_profile", widget.currentLang)),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.blue.shade600,
@@ -194,7 +286,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             ElevatedButton.icon(
               onPressed: _pickAndSaveImage,
               icon: const Icon(Icons.upload),
-              label: const Text("Upload Photo"),
+              label:  Text(_t("upload_photo", widget.currentLang)),
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(
                     horizontal: avatarSize, vertical: avatarSize * 0.2),
@@ -211,15 +303,22 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             const Divider(height: 24),
             _infoTile(Icons.email, Colors.blue, emailCtrl.text),
             _infoTile(Icons.phone, Colors.green, phoneCtrl.text),
-            _infoTile(Icons.person_outline, Colors.purple, "Gender: ${genderCtrl.text}"),
-            _infoTile(Icons.local_shipping, Colors.teal,
-                "Vehicle: ${vehicleCodeCtrl.text} (${vehicleRegCtrl.text})"),
+            _infoTile(
+              Icons.person_outline,
+              Colors.purple,
+              "${_t("gender", widget.currentLang)}: ${genderCtrl.text}",
+            ),
+            _infoTile(
+              Icons.local_shipping,
+              Colors.teal,
+              "${_t("vehicle_label", widget.currentLang)}: ${vehicleCodeCtrl.text} (${vehicleRegCtrl.text})",
+            ),
             const Divider(),
             if (addresses.isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("📍 Addresses:",
+                   Text(_t("addresses", widget.currentLang),
                       style: TextStyle(fontWeight: FontWeight.bold)),
                   ...addresses.map((addr) => ListTile(
                     leading: const Icon(Icons.home, color: Colors.orange),
@@ -252,33 +351,32 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionTitle("👤 Personal Information"),
-            _buildTextField("Username", usernameCtrl, isMobile: isMobile),
-            _buildTextField("First Name", firstNameCtrl, isMobile: isMobile),
-            _buildTextField("Last Name", lastNameCtrl, isMobile: isMobile),
-            _buildTextField("Email", emailCtrl, isEmail: true, isMobile: isMobile),
-            _buildTextField("Phone", phoneCtrl, isMobile: isMobile),
-            _buildTextField("Gender", genderCtrl, isMobile: isMobile),
+            _buildTextField(_t("username", widget.currentLang), usernameCtrl, isMobile: isMobile),
+            _buildTextField(_t("first_name", widget.currentLang), firstNameCtrl, isMobile: isMobile),
+            _buildTextField(_t("last_name", widget.currentLang), lastNameCtrl, isMobile: isMobile),
+            _buildTextField(_t("email", widget.currentLang), emailCtrl, isEmail: true, isMobile: isMobile),
+            _buildTextField(_t("phone", widget.currentLang), phoneCtrl, isMobile: isMobile),
+            _buildTextField(_t("gender", widget.currentLang), genderCtrl, isMobile: isMobile),
             const SizedBox(height: 16),
-            _sectionTitle("🚗 Vehicle Information"),
-            _buildTextField("Vehicle Code", vehicleCodeCtrl, isMobile: isMobile),
-            _buildTextField("Vehicle Reg", vehicleRegCtrl, isMobile: isMobile),
+            _sectionTitle(_t("vehicle_info", widget.currentLang)),
+            _buildTextField(_t("vehicle_code", widget.currentLang), vehicleCodeCtrl, isMobile: isMobile),
+            _buildTextField(_t("vehicle_reg", widget.currentLang), vehicleRegCtrl, isMobile: isMobile),
             const SizedBox(height: 16),
-            _sectionTitle("⚙️ Settings"),
+            _sectionTitle(_t("settings", widget.currentLang)),
             SwitchListTile(
               value: notify,
               onChanged: (val) => setState(() => notify = val),
-              title: const Text("Enable Notifications"),
+              title:  Text(_t("enable_notifications", widget.currentLang)),
             ),
             DropdownButtonFormField<String>(
               value: newsletter,
-              items: const [
-                DropdownMenuItem(value: "yes", child: Text("Yes")),
-                DropdownMenuItem(value: "no", child: Text("No")),
+              items:  [
+                DropdownMenuItem(value: "yes", child: Text(_t("yes", widget.currentLang))),
+                DropdownMenuItem(value: "no", child: Text(_t("no", widget.currentLang))),
               ],
               onChanged: (val) => setState(() => newsletter = val ?? "no"),
               decoration:
-              const InputDecoration(labelText: "Newsletter Subscription"),
+               InputDecoration(labelText:_t("newsletter_subscription", widget.currentLang)),
             ),
             const SizedBox(height: 24),
             Wrap(
@@ -306,7 +404,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                       ),
                     )
                         : const Icon(Icons.save),
-                    label: const Text("Save Changes"),
+                    label:  Text(_t("save_changes", widget.currentLang)),
                   ),
                 ),
                 SizedBox(
@@ -320,7 +418,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     ),
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.dashboard),
-                    label: const Text("Back to Dashboard"),
+                    label:  Text(_t("back_to_dashboard", widget.currentLang)),
                   ),
                 ),
               ],
@@ -338,9 +436,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       child: TextFormField(
         controller: controller,
         validator: (v) {
-          if (v == null || v.isEmpty) return "Required";
+          if (v == null || v.isEmpty) return _t("required", widget.currentLang);
           if (isEmail && !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
-            return "Invalid email";
+            return _t("invalid_email", widget.currentLang);
           }
           return null;
         },

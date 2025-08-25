@@ -2,10 +2,82 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class AddShipmentScreen extends StatefulWidget {
-  final String? shipmentId; // null = création
+String _t(String key, String lang) {
+  switch (lang) {
+    case 'fr':
+      return {
+        "edit_shipment": "Modifier l'expédition",
+        "add_shipment": "Ajouter une nouvelle expédition",
+        "city": "Ville",
+        "receiver_name": "Nom du destinataire",
+        "address": "Adresse",
+        "phone": "Téléphone",
+        "price": "Prix",
+        "dont_authorize": "Ne pas autoriser l'ouverture du colis",
+        "update_order": "Mettre à jour la commande",
+        "add_order": "Ajouter la commande",
+        "required": "Champ obligatoire",
+        "invalid_phone": "Le téléphone doit contenir exactement 10 chiffres",
+        "invalid_price": "Le prix doit contenir uniquement des chiffres",
+        "invalid_email": "Email invalide",
+        "success_update": "Expédition mise à jour avec succès !",
+        "success_add": "Expédition ajoutée avec succès !",
+        "user_not_logged": "Utilisateur non connecté",
+        "failed_load": "Échec du chargement des données d'expédition",
+      }[key] ?? key;
 
-  const AddShipmentScreen({Key? key, this.shipmentId}) : super(key: key);
+    case 'ar':
+      return {
+        "edit_shipment": "تعديل الشحنة",
+        "add_shipment": "إضافة شحنة جديدة",
+        "city": "المدينة",
+        "receiver_name": "اسم المستلم",
+        "address": "العنوان",
+        "phone": "الهاتف",
+        "price": "السعر",
+        "dont_authorize": "عدم السماح بفتح الطرد",
+        "update_order": "تحديث الطلب",
+        "add_order": "إضافة الطلب",
+        "required": "هذا الحقل مطلوب",
+        "invalid_phone": "يجب أن يحتوي الهاتف على 10 أرقام",
+        "invalid_price": "يجب أن يحتوي السعر على أرقام فقط",
+        "invalid_email": "البريد الإلكتروني غير صالح",
+        "success_update": "تم تحديث الشحنة بنجاح!",
+        "success_add": "تمت إضافة الشحنة بنجاح!",
+        "user_not_logged": "المستخدم غير مسجل الدخول",
+        "failed_load": "فشل تحميل بيانات الشحنة",
+      }[key] ?? key;
+
+    default:
+      return {
+        "edit_shipment": "Edit shipment",
+        "add_shipment": "Add new shipment",
+        "city": "City",
+        "receiver_name": "Receiver Name",
+        "address": "Address",
+        "phone": "Phone",
+        "price": "Price",
+        "dont_authorize": "Don't Authorize to open box",
+        "update_order": "UPDATE ORDER",
+        "add_order": "ADD NEW ORDER",
+        "required": "This field is required",
+        "invalid_phone": "Phone must be exactly 10 digits",
+        "invalid_price": "Price must contain only numbers",
+        "invalid_email": "Invalid email",
+        "success_update": "Shipment updated successfully!",
+        "success_add": "Shipment added successfully!",
+        "user_not_logged": "User not logged in",
+        "failed_load": "Failed to load shipment data",
+      }[key] ?? key;
+  }
+}
+
+class AddShipmentScreen extends StatefulWidget {
+  final String? shipmentId;
+  final String currentLang;
+
+  const AddShipmentScreen({Key? key, this.shipmentId, this.currentLang = 'en'})
+      : super(key: key);
 
   @override
   State<AddShipmentScreen> createState() => _AddShipmentScreenState();
@@ -21,6 +93,8 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
   final TextEditingController priceController = TextEditingController();
 
   bool dontAuthorize = false;
+  bool isEditMode = false;
+  bool isLoading = false;
 
   final List<String> cityOptions = [
     'Value',
@@ -56,9 +130,6 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
     'Khouribga',
   ];
 
-  bool isEditMode = false;
-  bool isLoading = false;
-
   @override
   void initState() {
     super.initState();
@@ -91,7 +162,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to load shipment data: $e")),
+        SnackBar(content: Text("${_t("failed_load", widget.currentLang)}: $e")),
       );
     } finally {
       setState(() {
@@ -106,7 +177,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not logged in")),
+        SnackBar(content: Text(_t("user_not_logged", widget.currentLang))),
       );
       return;
     }
@@ -125,53 +196,47 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
-    try {if (isEditMode) {
-      // Update existant sans supprimer status ni createdAt
-      await FirebaseFirestore.instance
-          .collection('shipments')
-          .doc(widget.shipmentId)
-          .update({
-        'city': selectedCity,
-        'receiverName': receiverNameController.text.trim(),
-        'address': addressController.text.trim(),
-        'phone': phoneController.text.trim(),
-        'price': priceController.text.trim(),
-        'dontAuthorize': dontAuthorize,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Shipment updated successfully!"),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-    else {
-      // Création
-      await FirebaseFirestore.instance.collection('shipments').add(shipmentData);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Shipment added successfully!"),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
+    try {
+      if (isEditMode) {
+        await FirebaseFirestore.instance
+            .collection('shipments')
+            .doc(widget.shipmentId)
+            .update({
+          'city': selectedCity,
+          'receiverName': receiverNameController.text.trim(),
+          'address': addressController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'price': priceController.text.trim(),
+          'dontAuthorize': dontAuthorize,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
 
-    Navigator.of(context).pop(); // Retour au dashboard
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_t("success_update", widget.currentLang)),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        await FirebaseFirestore.instance.collection('shipments').add(shipmentData);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_t("success_add", widget.currentLang)),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      Navigator.of(context).pop();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    if (isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -184,11 +249,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(4),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.shade300,
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
+                BoxShadow(color: Colors.grey.shade300, blurRadius: 6, offset: const Offset(0, 3)),
               ],
             ),
             child: Column(
@@ -206,13 +267,15 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                       const Icon(Icons.local_shipping_outlined, color: Colors.green),
                       const SizedBox(width: 8),
                       Text(
-                        isEditMode ? 'Edit shipment' : 'Add new shipment',
+                        isEditMode
+                            ? _t("edit_shipment", widget.currentLang)
+                            : _t("add_shipment", widget.currentLang),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                           fontSize: 16,
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -222,15 +285,15 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                     key: _formKey,
                     child: Column(
                       children: [
-                        buildLabeledDropdown('City', cityOptions),
+                        buildLabeledDropdown('city', cityOptions),
                         const SizedBox(height: 15),
-                        buildLabeledField('Receiver Name', receiverNameController),
+                        buildLabeledField('receiverName', receiverNameController),
                         const SizedBox(height: 15),
-                        buildLabeledField('Address', addressController),
+                        buildLabeledField('address', addressController),
                         const SizedBox(height: 15),
-                        buildLabeledField('Phone', phoneController, TextInputType.phone),
+                        buildLabeledField('phone', phoneController, TextInputType.phone),
                         const SizedBox(height: 15),
-                        buildLabeledField('Price', priceController, TextInputType.number),
+                        buildLabeledField('price', priceController, TextInputType.number),
                         const SizedBox(height: 15),
                         Row(
                           children: [
@@ -243,7 +306,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                                 });
                               },
                             ),
-                            const Text("Don't Authorize to open box"),
+                            Text(_t("dont_authorize", widget.currentLang)),
                           ],
                         ),
                         const SizedBox(height: 15),
@@ -259,7 +322,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                               ),
                             ),
                             child: Text(
-                              isEditMode ? 'UPDATE ORDER' : 'ADD NEW ORDER',
+                              isEditMode ? _t("update_order", widget.currentLang) : _t("add_order", widget.currentLang),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
@@ -280,37 +343,41 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
       ),
     );
   }
-  Widget buildLabeledField(String label, TextEditingController controller,
+
+  Widget buildLabeledField(String fieldKey, TextEditingController controller,
       [TextInputType inputType = TextInputType.text]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          _t(fieldKey, widget.currentLang),
+          style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
           keyboardType: inputType,
           validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return '$label is required';
+            if (value == null || value.trim().isEmpty) return _t("required", widget.currentLang);
+
+            if (fieldKey == 'phone' && !RegExp(r'^\d{10}$').hasMatch(value)) {
+              return _t("invalid_phone", widget.currentLang);
             }
-            if (label == 'Phone' && !RegExp(r'^\d{10}$').hasMatch(value)) {
-              return 'Phone must be exactly 10 digits';
+
+            if (fieldKey == 'price' && !RegExp(r'^\d+$').hasMatch(value)) {
+              return _t("invalid_price", widget.currentLang);
             }
-            if (label == 'Price' && !RegExp(r'^\d+$').hasMatch(value)) {
-              return 'Price must contain only numbers';
+
+            // Example for email validation if needed
+            if (fieldKey == 'email' &&
+                !RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$").hasMatch(value)) {
+              return _t("invalid_email", widget.currentLang);
             }
+
             return null;
           },
           decoration: InputDecoration(
-            hintText: label,
+            hintText: _t(fieldKey, widget.currentLang),
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -328,24 +395,20 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
     );
   }
 
-  Widget buildLabeledDropdown(String label, List<String> items) {
+  Widget buildLabeledDropdown(String fieldKey, List<String> items) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          _t(fieldKey, widget.currentLang),
+          style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           value: selectedCity ?? items.first,
           validator: (value) {
             if (value == null || value == 'Value' || value.startsWith('--')) {
-              return 'Please select a valid city';
+              return _t("required", widget.currentLang);
             }
             return null;
           },
@@ -356,10 +419,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                 value: city,
                 child: Text(
                   city.replaceAll('--', '').trim(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
                 ),
               );
             } else {
@@ -388,4 +448,3 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
     );
   }
 }
-

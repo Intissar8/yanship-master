@@ -34,10 +34,6 @@ class HomePage extends StatelessWidget {
 
     return Scaffold(
       appBar: const CustomNavbar(),
-      // Drawer uniquement sur mobile
-      endDrawer: isMobile ? const CustomDrawer() : null,
-      drawerEnableOpenDragGesture:
-      false, // 🔹 Empêche ouverture par swipe qui recrée un hamburger
       body: SingleChildScrollView(
         child: Column(
           children: const [
@@ -78,38 +74,77 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.white,
       elevation: 4,
       toolbarHeight: 80,
+      automaticallyImplyLeading: false, // ✅ supprime hamburger auto
       titleSpacing: 0,
-      automaticallyImplyLeading: false, // ✅ Supprime hamburger auto
       title: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Row(
           children: [
             GestureDetector(
-              onTap: () {},
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomePage()),
+                );
+              },
               child: Image.asset(
                 'assets/images/logo.png',
                 height: 55,
               ),
             ),
             const Spacer(),
+
+            // 🔹 Desktop : texte
             if (!isMobile)
               Row(
                 children: [
-                  _NavItem(title: "Home", onTap: () {}),
+                  _NavItem(title: "Home", onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomePage()),
+                    );
+                  }),
                   const SizedBox(width: 24),
-                  _NavItem(
-                    title: "Sign in",
-                    onTap: () {
+                  _NavItem(title: "Sign in", onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
+                  }),
+                  const SizedBox(width: 24),
+                  _NavItem(title: "Sign up", onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                    );
+                  }),
+                ],
+              )
+            // 🔹 Mobile : icônes
+            else
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.home, color: Colors.black87),
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomePage()),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.login, color: Colors.black87),
+                    onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
                       );
                     },
                   ),
-                  const SizedBox(width: 24),
-                  _NavItem(
-                    title: "Sign Up",
-                    onTap: () {
+                  IconButton(
+                    icon: const Icon(Icons.person_add, color: Colors.black87),
+                    onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const RegisterScreen()),
@@ -118,8 +153,6 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ],
               ),
-
-
           ],
         ),
       ),
@@ -931,58 +964,6 @@ class _ContactSectionState extends State<ContactSection> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class CustomDrawer extends StatelessWidget {
-  const CustomDrawer({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: Colors.white,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-        children: [
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text("Home"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const HomePage()),
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.login),
-            title: const Text("Sign In"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.person_add),
-            title: const Text("Sign Up"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RegisterScreen()),
-              );
-            },
-          ),
-
-        ],
-      ),
     );
   }
 }

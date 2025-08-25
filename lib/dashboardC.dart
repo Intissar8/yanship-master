@@ -150,8 +150,9 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
               if (value == 'profile') {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const CustomerProfileScreen()),
-                );
+                  MaterialPageRoute(builder: (_) =>   CustomerProfileScreen(currentLang: _currentLang),
+                  ),
+                  );
               } else if (value == 'logout') {
                 await FirebaseAuth.instance.signOut();
                 Navigator.pushReplacement(
@@ -506,7 +507,9 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
           ElevatedButton.icon(
             onPressed: () {
               Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const AddShipmentScreen()));
+                  MaterialPageRoute(builder: (_) => AddShipmentScreen(currentLang: _currentLang),
+                  ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade800,
@@ -620,7 +623,11 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
           Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => AddShipmentScreen(shipmentId: id)));
+                  builder: (_) => AddShipmentScreen(
+                    shipmentId: id,
+                    currentLang: _currentLang,
+                  ),
+              ),);
         } else if (selected == 'delete') {
           final confirm = await showDialog<bool>(
             context: context,
