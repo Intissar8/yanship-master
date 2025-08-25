@@ -8,10 +8,98 @@ import 'dart:typed_data';
 import 'dart:convert';
 
 
+String _t(String key, String lang) {
+  switch (lang) {
+    case 'fr':
+      return {
+        "dashboard_customer": "Tableau de bord client",
+        "view_profile": "Voir le profil",
+        "logout": "Se déconnecter",
+        "no_shipments": "Aucune expédition trouvée",
+        "city": "Ville",
+        "status": "Statut",
+        "address": "Adresse",
+        "phone": "Téléphone",
+        "price": "Prix",
+        "name": "Nom",
+        "actions": "Actions",
+        "created_at": "Créé le",
+        "create_order": "Créer une commande",
+        "pickup": "Ramassage",
+        "profile": "Profil",
+        "tracking_id": "ID de suivi",
+        "search_tracking": "Rechercher un suivi",
+        "all": "Tous",
+        "created": "Créé",
+        "confirmed": "Confirmé",
+        "confirm_shipment": "Confirmer l'expédition",
+        "edit_shipment": "Modifier l'expédition",
+        "delete_shipment": "Supprimer l'expédition",
+        "print_label": "Imprimer l'étiquette",
+      }[key] ?? key;
+
+    case 'ar':
+      return {
+        "dashboard_customer": "لوحة تحكم العميل",
+        "view_profile": "عرض الملف الشخصي",
+        "logout": "تسجيل الخروج",
+        "no_shipments": "لا توجد شحنات",
+        "city": "المدينة",
+        "status": "الحالة",
+        "address": "العنوان",
+        "phone": "الهاتف",
+        "price": "السعر",
+        "name": "الاسم",
+        "actions": "إجراءات",
+        "created_at": "تاريخ الإنشاء",
+        "create_order": "إنشاء طلب جديد",
+        "pickup": "استلام",
+        "profile": "الملف الشخصي",
+        "tracking_id": "رقم التتبع",
+        "search_tracking": "بحث التتبع",
+        "all": "الكل",
+        "created": "تم الإنشاء",
+        "confirmed": "مؤكد",
+        "confirm_shipment": "تأكيد الشحنة",
+        "edit_shipment": "تعديل الشحنة",
+        "delete_shipment": "حذف الشحنة",
+        "print_label": "طباعة الملصق",
+      }[key] ?? key;
+
+    default: // English
+      return {
+        "dashboard_customer": "Dashboard Customer",
+        "view_profile": "View Profile",
+        "logout": "Logout",
+        "no_shipments": "No shipments found",
+        "city": "City",
+        "status": "Status",
+        "address": "Address",
+        "phone": "Phone",
+        "price": "Price",
+        "name": "Name",
+        "actions": "Actions",
+        "created_at": "Created At",
+        "create_order": "Create New Order",
+        "pickup": "Pickup",
+        "profile": "Profile",
+        "tracking_id": "Tracking ID",
+        "search_tracking": "Search Tracking",
+        "all": "All",
+        "created": "Created",
+        "confirmed": "Confirmed",
+        "confirm_shipment": "Confirm Shipment",
+        "edit_shipment": "Edit Shipment",
+        "delete_shipment": "Delete Shipment",
+        "print_label": "Print Label",
+      }[key] ?? key;
+  }
+}
 
 
 class ShipmentsListStyled extends StatefulWidget {
   const ShipmentsListStyled({super.key});
+
 
   @override
   State<ShipmentsListStyled> createState() => _ShipmentsListStyledState();
@@ -21,6 +109,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
   String searchQuery = "";
   String statusFilter = "";
   Set<String> expandedRows = {};
+  String _currentLang = 'en'; // default language
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +119,30 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
     return Scaffold(
       backgroundColor: Colors.blue.shade50,
       appBar: AppBar(
-        title: const Text("Dashboard Customer"),
+        automaticallyImplyLeading: false,
+        title: Text(_t("dashboard_customer", _currentLang)),
         backgroundColor: Colors.blue.shade800,
         elevation: 2,
         actions: [
+          DropdownButton<String>(
+            value: _currentLang,
+            dropdownColor: Colors.blue.shade800,
+            underline: const SizedBox(),
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _currentLang = value;
+                  // Optional: update app locale if you use a localization provider
+                });
+              }
+            },
+            items: const [
+              DropdownMenuItem(value: 'en', child: Text('EN')),
+              DropdownMenuItem(value: 'fr', child: Text('FR')),
+              DropdownMenuItem(value: 'ar', child: Text('AR')),
+            ],
+          ),
           PopupMenuButton<String>(
             offset: const Offset(0, 50),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -52,23 +161,23 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+                PopupMenuItem(
                 value: 'profile',
                 child: Row(
                   children: [
                     Icon(Icons.person, color: Colors.blue),
                     SizedBox(width: 8),
-                    Text("View Profile"),
+                    Text(_t("view_profile", _currentLang)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+               PopupMenuItem(
                 value: 'logout',
                 child: Row(
                   children: [
                     Icon(Icons.logout, color: Colors.red),
                     SizedBox(width: 8),
-                    Text("Logout"),
+                    Text(_t("logout", _currentLang)),
                   ],
                 ),
               ),
@@ -226,9 +335,9 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDetailRow("Address", data['address'] ?? 'N/A'),
-                        _buildDetailRow("Phone", data['phone'] ?? 'N/A'),
-                        _buildDetailRow("Price", "MAD ${data['price'] ?? ''}"),
+                        _buildDetailRow(_t("address", _currentLang), data['address'] ?? 'N/A'),
+                        _buildDetailRow(_t("phone", _currentLang), data['phone'] ?? 'N/A'),
+                        _buildDetailRow(_t("price", _currentLang), "MAD ${data['price'] ?? ''}"),
                       ],
                     ),
                   ),
@@ -262,30 +371,30 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                         vertical: 12, horizontal: 16),
                     color: Colors.blue.shade100,
                     child: Row(
-                      children: const [
+                      children:  [
                         SizedBox(
                             width: 200,
-                            child: Text("Name",
+                            child: Text(_t("name", _currentLang),
                                 style:
                                 TextStyle(fontWeight: FontWeight.bold))),
                         SizedBox(
                             width: 150,
-                            child: Text("City",
+                            child: Text(_t("city", _currentLang),
                                 style:
                                 TextStyle(fontWeight: FontWeight.bold))),
                         SizedBox(
                             width: 100,
-                            child: Text("Price",
+                            child: Text(_t("price", _currentLang),
                                 style:
                                 TextStyle(fontWeight: FontWeight.bold))),
                         SizedBox(
                             width: 150,
-                            child: Text("Status",
+                            child: Text(_t("status", _currentLang),
                                 style:
                                 TextStyle(fontWeight: FontWeight.bold))),
                         SizedBox(
                             width: 250,
-                            child: Text("Actions",
+                            child: Text(_t("actions", _currentLang),
                                 style:
                                 TextStyle(fontWeight: FontWeight.bold))),
                       ],
@@ -358,10 +467,9 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildDetailRow("Address", data['address'] ?? 'N/A'),
-                            _buildDetailRow("Phone", data['phone'] ?? 'N/A'),
-                            _buildDetailRow("Created At",
-                                data['createdAt']?.toDate().toString() ?? 'N/A'),
+                            _buildDetailRow(_t("address", _currentLang), data['address'] ?? 'N/A'),
+                            _buildDetailRow(_t("phone", _currentLang), data['phone'] ?? 'N/A'),
+                            _buildDetailRow(_t("created_at", _currentLang), data['createdAt']?.toDate().toString() ?? 'N/A'),
                           ],
                         ),
                       ),
@@ -408,7 +516,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text("Create New Order",
+            label:  Text(_t("create_order", _currentLang),
                 style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
           ElevatedButton(
@@ -420,10 +528,10 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
               shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text("Pickup",
+            child:  Text(_t("pickup", _currentLang),
                 style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
-          ElevatedButton.icon(
+          /*ElevatedButton.icon(
             onPressed: () {
               Navigator.push(
                 context,
@@ -438,27 +546,29 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             icon: const Icon(Icons.person, color: Colors.white),
-            label: const Text("Profile",
+            label:  Text(_t("profile", _currentLang),
                 style: TextStyle(color: Colors.white, fontSize: 16)),
-          ),
+          ),*/
           SizedBox(
             width: isMobile ? 120 : 150,
-            child: _buildSearchField("Tracking ID"),
+            child: _buildSearchField(_t("tracking_id", _currentLang)),
           ),
           SizedBox(
             width: isMobile ? 150 : 200,
-            child: _buildSearchField("Search Tracking", onChanged: (value) {
+            child: _buildSearchField(_t("search_tracking", _currentLang), onChanged: (value) {
               setState(() => searchQuery = value.toLowerCase());
             }),
           ),
           DropdownButton<String>(
             value: statusFilter.isEmpty ? null : statusFilter,
-            hint: const Text("-- Status --"),
+            hint: Text("-- ${_t("status", _currentLang)} --"), // translated hint
             underline: const SizedBox(),
-            items: ["All", "Created", "Pickup", "Confirmed"]
-                .map((status) => DropdownMenuItem(
-                value: status == "All" ? "" : status, child: Text(status)))
-                .toList(),
+            items: [
+              DropdownMenuItem(value: "", child: Text(_t("all", _currentLang))),
+              DropdownMenuItem(value: "Created", child: Text(_t("created", _currentLang))),
+              DropdownMenuItem(value: "Pickup", child: Text(_t("pickup", _currentLang))),
+              DropdownMenuItem(value: "Confirmed", child: Text(_t("confirmed", _currentLang))),
+            ],
             onChanged: (value) => setState(() => statusFilter = value ?? ""),
           ),
         ],
@@ -553,36 +663,36 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
           ];
         } else {
           return [
-            const PopupMenuItem(
+              PopupMenuItem(
               value: 'confirm',
               child: Row(children: [
                 Icon(Icons.check_circle, color: Colors.blue),
                 SizedBox(width: 8),
-                Text('Confirm Shipment')
+                Text(_t("confirm_shipment", _currentLang))
               ]),
             ),
-            const PopupMenuItem(
+              PopupMenuItem(
               value: 'edit',
               child: Row(children: [
                 Icon(Icons.edit, color: Colors.black54),
                 SizedBox(width: 8),
-                Text('Edit Shipment')
+                Text(_t("edit_shipment", _currentLang))
               ]),
             ),
-            const PopupMenuItem(
+              PopupMenuItem(
               value: 'delete',
               child: Row(children: [
                 Icon(Icons.cancel, color: Colors.red),
                 SizedBox(width: 8),
-                Text('Delete Shipment')
+                Text(_t("delete_shipment", _currentLang))
               ]),
             ),
-            const PopupMenuItem(
+              PopupMenuItem(
               value: 'print',
               child: Row(children: [
                 Icon(Icons.print),
                 SizedBox(width: 8),
-                Text('Print Label')
+                Text(_t("print_label", _currentLang))
               ]),
             ),
           ];
