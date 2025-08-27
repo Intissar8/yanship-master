@@ -152,7 +152,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                   context,
                   MaterialPageRoute(builder: (_) =>   CustomerProfileScreen(currentLang: _currentLang),
                   ),
-                  );
+                );
               } else if (value == 'logout') {
                 await FirebaseAuth.instance.signOut();
                 Navigator.pushReplacement(
@@ -162,7 +162,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
               }
             },
             itemBuilder: (context) => [
-                PopupMenuItem(
+              PopupMenuItem(
                 value: 'profile',
                 child: Row(
                   children: [
@@ -172,7 +172,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                   ],
                 ),
               ),
-               PopupMenuItem(
+              PopupMenuItem(
                 value: 'logout',
                 child: Row(
                   children: [
@@ -507,8 +507,8 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
           ElevatedButton.icon(
             onPressed: () {
               Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => AddShipmentScreen(currentLang: _currentLang),
-                  ),
+                MaterialPageRoute(builder: (_) => AddShipmentScreen(currentLang: _currentLang),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -621,13 +621,13 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
               .update({'status': 'Confirmed'});
         } else if (selected == 'edit') {
           Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => AddShipmentScreen(
-                    shipmentId: id,
-                    currentLang: _currentLang,
-                  ),
-              ),);
+            context,
+            MaterialPageRoute(
+              builder: (_) => AddShipmentScreen(
+                shipmentId: id,
+                currentLang: _currentLang,
+              ),
+            ),);
         } else if (selected == 'delete') {
           final confirm = await showDialog<bool>(
             context: context,
@@ -670,7 +670,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
           ];
         } else {
           return [
-              PopupMenuItem(
+            PopupMenuItem(
               value: 'confirm',
               child: Row(children: [
                 Icon(Icons.check_circle, color: Colors.blue),
@@ -678,7 +678,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                 Text(_t("confirm_shipment", _currentLang))
               ]),
             ),
-              PopupMenuItem(
+            PopupMenuItem(
               value: 'edit',
               child: Row(children: [
                 Icon(Icons.edit, color: Colors.black54),
@@ -686,7 +686,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                 Text(_t("edit_shipment", _currentLang))
               ]),
             ),
-              PopupMenuItem(
+            PopupMenuItem(
               value: 'delete',
               child: Row(children: [
                 Icon(Icons.cancel, color: Colors.red),
@@ -694,7 +694,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                 Text(_t("delete_shipment", _currentLang))
               ]),
             ),
-              PopupMenuItem(
+            PopupMenuItem(
               value: 'print',
               child: Row(children: [
                 Icon(Icons.print),

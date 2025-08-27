@@ -287,7 +287,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
                       children: [
                         buildLabeledDropdown('city', cityOptions),
                         const SizedBox(height: 15),
-                        buildLabeledField('receiverName', receiverNameController),
+                        buildLabeledField('receiver_name', receiverNameController),
                         const SizedBox(height: 15),
                         buildLabeledField('address', addressController),
                         const SizedBox(height: 15),
