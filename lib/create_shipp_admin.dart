@@ -68,7 +68,8 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
   }
 
   Future<void> _pickFiles() async {
-    final typeGroup = XTypeGroup(label: 'documents', extensions: ['pdf', 'jpg', 'png']);
+    final typeGroup = XTypeGroup(
+        label: 'documents', extensions: ['pdf', 'jpg', 'png']);
     final files = await openFiles(acceptedTypeGroups: [typeGroup]);
 
     if (files.isNotEmpty) {
@@ -121,27 +122,84 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
           key: _formKey,
           child: Column(
             children: [
+              // Shipment Header
               _buildCard("Shipment Header", Icons.local_shipping, [
                 _responsiveRow([
                   _textField("Order Number", trackingNumber,
                       readOnly: true, small: isMobile),
                   _dropdownField("Agency List", ["YanShip Group"],
                       small: isMobile),
-                  _dropdownField("Origin Office", ["Ben Mellal","Casablanca","Dakhla","Fes","Marrakech","Oujda"],
-                      small: isMobile),
+                  _dropdownField("Origin Office", [
+                    "Ben Mellal",
+                    "Casablanca",
+                    "Dakhla",
+                    "Fes",
+                    "Marrakech",
+                    "Oujda"
+                  ], small: isMobile),
                 ], isMobile),
               ]),
+
+              // Sender + Recipient Information
+              _responsiveRow([
+                Expanded(
+                  child: _buildCard(
+                    "Sender Information",
+                    Icons.person,
+                    [
+                      _dropdownField(
+                          "Sender/Customer", ["Customer A", "Customer B"],
+                          small: isMobile),
+                      _dropdownField("Sender Address",
+                          ["Address 1", "Address 2"],
+                          small: isMobile),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _buildCard(
+                    "Recipient Information",
+                    Icons.person_pin,
+                    [
+                      _dropdownField("Recipient/Customer",
+                          ["Customer C", "Customer D"],
+                          small: isMobile),
+                      _dropdownField("Recipient Address",
+                          ["Address 3", "Address 4"],
+                          small: isMobile),
+                    ],
+                  ),
+                ),
+              ], isMobile),
+
+              // Shipment Info
               _buildCard("Shipment Info", Icons.inventory, [
                 _responsiveRow([
-                  _dropdownField("Logistics Service", ["Road Freight", "Air Freight"],
+                  _dropdownField("Logistics Service",
+                      ["Road Freight", "Air Freight"],
                       small: isMobile),
-                  _dropdownField("Courier Company", ["YanShip"], small: isMobile),
+                  _dropdownField("Courier Company", ["YanShip"],
+                      small: isMobile),
                 ], isMobile),
                 _responsiveRow([
-                  _dropdownField("Delivery Time", ["Next Day", "Same Day"],
+                  _dropdownField("Delivery Time",
+                      ["Next Day", "Same Day"],
                       small: isMobile),
-                  _dropdownField("Delivery Status", ["Created", "In Transit","Cancelled","Confirm","Distribution","In Warehouse","No answer","Picked up","Pickup","Rejected","Reported","Retrieve","Returned"],
-                      small: isMobile),
+                  _dropdownField("Delivery Status", [
+                    "Created",
+                    "In Transit",
+                    "Cancelled",
+                    "Confirm",
+                    "Distribution",
+                    "In Warehouse",
+                    "No answer",
+                    "Picked up",
+                    "Pickup",
+                    "Rejected",
+                    "Reported",
+                    "Retrieve",
+                    "Returned"
+                  ], small: isMobile),
                 ], isMobile),
                 const SizedBox(height: 6),
                 Align(
@@ -165,13 +223,16 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                       return ListTile(
                         title: Text(file.name),
                         trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
+                          icon:
+                          const Icon(Icons.delete, color: Colors.red),
                           onPressed: () => _removeFile(index),
                         ),
                       );
                     }),
                   ),
               ]),
+
+              // Package Info
               _buildCard("Package Info", Icons.inbox, [
                 Column(
                   children: List.generate(packages.length, (index) {
@@ -184,15 +245,16 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                               small: isMobile, flex: 3),
                           _textField("Quantity", pkg.quantity,
                               isNumber: true, small: isMobile, flex: 1),
-                          _textField("Additional charge", pkg.additionalCharge,
+                          _textField("Additional charge",
+                              pkg.additionalCharge,
                               isNumber: true, small: isMobile, flex: 1),
                           _textField("Declared value", pkg.declaredValue,
                               isNumber: true, small: isMobile, flex: 1),
                           if (index != 0)
                             IconButton(
                               onPressed: () => _removePackage(index),
-                              icon:
-                              const Icon(Icons.delete, color: Colors.red),
+                              icon: const Icon(Icons.delete,
+                                  color: Colors.red),
                             ),
                         ], isMobile),
                         const SizedBox(height: 8),
@@ -215,22 +277,15 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Theme(
-                    data: Theme.of(context).copyWith(
-                      elevatedButtonTheme: ElevatedButtonThemeData(
-                        style: ButtonStyle(
-                          foregroundColor: MaterialStateProperty.all(Colors.white),
-                        ),
-                      ),
-                    ),
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.add),
-                      label: const Text("Add Boxes or Packages"),
-                      onPressed: _addPackage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                      ),
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text("Add Boxes or Packages"),
+                    onPressed: _addPackage,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 10),
                     ),
                   ),
                 ),
@@ -242,33 +297,32 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                       readOnly: true, isNumber: true, small: isMobile),
                 ], isMobile),
               ]),
+
+              // Driver
               _buildCard("Assign Driver", Icons.drive_eta, [
-                _dropdownField("Driver", ["Driver 1", "Driver 2"], small: isMobile),
+                _dropdownField("Driver", ["Driver 1", "Driver 2"],
+                    small: isMobile),
               ]),
+
               const SizedBox(height: 16),
               Center(
-                child: Theme(
-                  data: Theme.of(context).copyWith(
-                    elevatedButtonTheme: ElevatedButtonThemeData(
-                      style: ButtonStyle(
-                        foregroundColor: MaterialStateProperty.all(Colors.white),
-                      ),
-                    ),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: const Text("Create New Shipment"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade600,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 16),
                   ),
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.add_circle_outline),
-                    label: const Text("Create New Shipment"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                    ),
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Shipment Created Successfully!")));
-                      }
-                    },
-                  ),
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  "Shipment Created Successfully!")));
+                    }
+                  },
                 ),
               ),
             ],
@@ -278,6 +332,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
     );
   }
 
+  // Helpers
   Widget _responsiveRow(List<Widget> children, bool isMobile) {
     if (isMobile) {
       return Column(
@@ -292,10 +347,13 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
     } else {
       return Row(
         children: children
-            .map((w) => Expanded(child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: w,
-        )))
+            .map((w) => Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 4, vertical: 2),
+            child: w,
+          ),
+        ))
             .toList(),
       );
     }
@@ -305,7 +363,8 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 5),
       elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape:
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -314,7 +373,8 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: Colors.grey.shade800,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+              borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(8)),
             ),
             child: Row(
               children: [
@@ -350,31 +410,39 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         decoration: InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+          contentPadding:
+          const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
           labelText: label,
           border: const OutlineInputBorder(),
           filled: true,
-          fillColor: readOnly ? Colors.grey.shade200 : Colors.grey.shade100,
+          fillColor:
+          readOnly ? Colors.grey.shade200 : Colors.grey.shade100,
         ),
-        validator: (val) => val == null || val.isEmpty ? "Enter $label" : null,
+        validator: (val) =>
+        val == null || val.isEmpty ? "Enter $label" : null,
         onChanged: (_) => _calculateTotals(),
       ),
     );
   }
 
-  Widget _dropdownField(String label, List<String> items, {bool small = false}) {
+  Widget _dropdownField(String label, List<String> items,
+      {bool small = false}) {
     return SizedBox(
       height: small ? 40 : 50,
       child: DropdownButtonFormField<String>(
         isDense: true,
         decoration: InputDecoration(
-          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+          contentPadding:
+          const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
           labelText: label,
           border: const OutlineInputBorder(),
           filled: true,
           fillColor: Colors.grey.shade100,
         ),
-        items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+        items: items
+            .map((e) =>
+            DropdownMenuItem(value: e, child: Text(e)))
+            .toList(),
         onChanged: (val) {},
         validator: (val) => val == null ? "Select $label" : null,
       ),
