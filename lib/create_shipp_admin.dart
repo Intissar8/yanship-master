@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ShipmentFormStyledPage extends StatefulWidget {
   const ShipmentFormStyledPage({super.key});
 
   @override
-  State<ShipmentFormStyledPage> createState() =>
-      _ShipmentFormStyledPageState();
+  State<ShipmentFormStyledPage> createState() => _ShipmentFormStyledPageState();
 }
 
 class Package {
@@ -23,19 +23,121 @@ class Package {
 class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers
-  final trackingNumber = TextEditingController();
   final totalValue = TextEditingController();
   final totalPrice = TextEditingController();
+  final Map<String, TextEditingController> controllers = {};
 
   List<Package> packages = [];
   List<XFile> attachedFiles = [];
 
+  List<String> trackingNumbers = [];
+  String? selectedTracking;
+  Map<String, dynamic>? shipmentData;
+  Map<String, dynamic>? clientData;
+  Map<String, dynamic>? recipientData;
+  List<Map<String, dynamic>> drivers = [];
+  String? selectedDriver;
+  String? selectedShipmentDocId;
+
   @override
   void initState() {
     super.initState();
-    trackingNumber.text = DateTime.now().millisecondsSinceEpoch.toString();
-    _addPackage(); // Start with one package
+    _initControllers();
+    _addPackage();
+    _loadTrackingNumbers();
+    _loadDrivers();
+  }
+
+  void _initControllers() {
+    controllers['receiverName'] = TextEditingController();
+    controllers['address'] = TextEditingController();
+    controllers['logisticsService'] = TextEditingController();
+    controllers['courierCompany'] = TextEditingController();
+    controllers['deliveryTime'] = TextEditingController();
+    controllers['deliveryStatus'] = TextEditingController();
+    controllers['driver'] = TextEditingController();
+    controllers['senderName'] = TextEditingController();
+    controllers['senderAddress'] = TextEditingController();
+  }
+
+  Future<void> _loadDrivers() async {
+    final snapshot = await FirebaseFirestore.instance.collection('drivers').get();
+    setState(() {
+      drivers = snapshot.docs.map((doc) {
+        final firstName = doc['firstName'] ?? '';
+        final lastName = doc['lastName'] ?? '';
+        final address = doc['addresses']?[0]?['address'] ?? '';
+        return {
+          'label': "$address - $firstName $lastName",
+          'name': "$firstName $lastName",
+          'address': address,
+          'id': doc.id,
+        };
+      }).toList();
+    });
+  }
+
+  Future<void> _loadTrackingNumbers() async {
+    final snapshot = await FirebaseFirestore.instance.collection('shipments').get();
+    setState(() {
+      trackingNumbers = snapshot.docs
+          .map((doc) => doc['trackingNumber']?.toString() ?? "")
+          .where((e) => e.isNotEmpty)
+          .toList();
+    });
+  }
+
+  Future<void> _onSelectShipment(String tracking) async {
+    setState(() {
+      selectedTracking = tracking;
+      shipmentData = null;
+      clientData = null;
+      recipientData = null;
+    });
+
+    final snap = await FirebaseFirestore.instance
+        .collection('shipments')
+        .where('trackingNumber', isEqualTo: tracking)
+        .limit(1)
+        .get();
+
+    if (snap.docs.isNotEmpty) {
+      final doc = snap.docs.first;
+      final data = doc.data();
+      setState(() {
+        shipmentData = data;
+        selectedShipmentDocId = doc.id;
+      });
+
+      if (data['clientId'] != null) {
+        final clientSnap = await FirebaseFirestore.instance
+            .collection('clients')
+            .doc(data['clientId'])
+            .get();
+        if (clientSnap.exists) clientData = clientSnap.data();
+      }
+
+      if (data['recipientId'] != null) {
+        final recSnap = await FirebaseFirestore.instance
+            .collection('clients')
+            .doc(data['recipientId'])
+            .get();
+        if (recSnap.exists) recipientData = recSnap.data();
+      }
+
+      // Initialize controllers safely
+      controllers['receiverName']!.text = shipmentData?['receiverName'] ?? "";
+      controllers['address']!.text = shipmentData?['address'] ?? "";
+      controllers['logisticsService']!.text = shipmentData?['logisticsService'] ?? "";
+      controllers['courierCompany']!.text = shipmentData?['courierCompany'] ?? "";
+      controllers['deliveryTime']!.text = shipmentData?['deliveryTime'] ?? "";
+      controllers['deliveryStatus']!.text = shipmentData?['deliveryStatus'] ?? "";
+      controllers['driver']!.text = shipmentData?['driver'] ?? "";
+      controllers['senderName']!.text = clientData?['firstName'] ?? '';
+      controllers['senderAddress']!.text = clientData?['addresses']?[0]?['address'] ?? '';
+
+      selectedDriver = shipmentData?['driver'];
+    }
   }
 
   void _addPackage() {
@@ -68,10 +170,8 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
   }
 
   Future<void> _pickFiles() async {
-    final typeGroup = XTypeGroup(
-        label: 'documents', extensions: ['pdf', 'jpg', 'png']);
+    final typeGroup = XTypeGroup(label: 'documents', extensions: ['pdf', 'jpg', 'png']);
     final files = await openFiles(acceptedTypeGroups: [typeGroup]);
-
     if (files.isNotEmpty) {
       setState(() {
         attachedFiles.addAll(files);
@@ -90,7 +190,6 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
 
   @override
   void dispose() {
-    trackingNumber.dispose();
     totalValue.dispose();
     totalPrice.dispose();
     for (var pkg in packages) {
@@ -103,8 +202,112 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       pkg.width.dispose();
       pkg.height.dispose();
     }
+    for (var c in controllers.values) c.dispose();
     super.dispose();
   }
+
+  Future<void> _saveShipment() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (selectedTracking == null || shipmentData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select an existing shipment to edit."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final now = Timestamp.now();
+
+    final packageList = packages.map((pkg) => {
+      "description": pkg.description.text,
+      "quantity": int.tryParse(pkg.quantity.text) ?? 1,
+      "additionalCharge": double.tryParse(pkg.additionalCharge.text) ?? 0,
+      "declaredValue": double.tryParse(pkg.declaredValue.text) ?? 0,
+      "weight": double.tryParse(pkg.weight.text) ?? 1,
+      "length": double.tryParse(pkg.length.text) ?? 1,
+      "width": double.tryParse(pkg.width.text) ?? 1,
+      "height": double.tryParse(pkg.height.text) ?? 1,
+    }).toList();
+
+    final fileNames = attachedFiles.map((f) => f.name).toList();
+
+    final updatedShipment = {
+      "address": controllers['address']!.text,
+      "receiverName": controllers['receiverName']!.text,
+      "city": shipmentData?['city'] ?? "Casablanca",
+      "phone": clientData?['phone'] ?? "0123456789",
+      "packages": packageList,
+      "totalValue": double.tryParse(totalValue.text) ?? 0,
+      "totalPrice": double.tryParse(totalPrice.text) ?? 0,
+      "price": totalPrice.text,
+      "dontAuthorize": shipmentData?['dontAuthorize'] ?? false,
+      "files": fileNames,
+      "logisticsService": controllers['logisticsService']!.text,
+      "courierCompany": controllers['courierCompany']!.text,
+      "deliveryTime": controllers['deliveryTime']!.text,
+      "deliveryStatus": controllers['deliveryStatus']!.text,
+      "driverId": selectedDriver != null
+          ? drivers.firstWhere((d) => d['label'] == selectedDriver)['id']
+          : shipmentData?['driverId'],
+      "agencyList": shipmentData?['agencyList'], // ✅ Add this
+      "originOffice": shipmentData?['originOffice'],
+      "updatedAt": now,
+    };
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('shipments')
+          .doc(selectedShipmentDocId)
+          .update(updatedShipment);
+
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.green, size: 60),
+                const SizedBox(height: 12),
+                const Text(
+                  "Shipment updated successfully!",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade600,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text("OK"),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Error"),
+          content: Text("Error updating shipment: $e"),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("Close"))
+          ],
+        ),
+      );
+    }
+  }
+
+  // ------------------ UI ------------------
 
   @override
   Widget build(BuildContext context) {
@@ -125,81 +328,119 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
               // Shipment Header
               _buildCard("Shipment Header", Icons.local_shipping, [
                 _responsiveRow([
-                  _textField("Order Number", trackingNumber,
-                      readOnly: true, small: isMobile),
-                  _dropdownField("Agency List", ["YanShip Group"],
-                      small: isMobile),
-                  _dropdownField("Origin Office", [
-                    "Ben Mellal",
-                    "Casablanca",
-                    "Dakhla",
-                    "Fes",
-                    "Marrakech",
-                    "Oujda"
-                  ], small: isMobile),
+                  _dropdownTrackingField("Order Number", trackingNumbers),
+                  _safeDropdown(
+                      label: "Agency List",
+                      items: ["YanShip Group"],
+                      value: shipmentData?['agencyList'],
+                      onChanged: (val) {
+                        setState(() {
+                          shipmentData?['agencyList'] = val;
+                        });
+                      }),
+                  _safeDropdown(
+                      label: "Origin Office",
+                      items: ["Ben Mellal", "Casablanca", "Dakhla", "Fes", "Marrakech", "Oujda"],
+                      value: shipmentData?['originOffice'],
+                      onChanged: (val) {
+                        setState(() {
+                          shipmentData?['originOffice'] = val;
+                        });
+                      }),
                 ], isMobile),
               ]),
 
-              // Sender + Recipient Information
+              // Sender + Recipient
               _responsiveRow([
                 Expanded(
-                  child: _buildCard(
-                    "Sender Information",
-                    Icons.person,
-                    [
-                      _dropdownField(
-                          "Sender/Customer", ["Customer A", "Customer B"],
-                          small: isMobile),
-                      _dropdownField("Sender Address",
-                          ["Address 1", "Address 2"],
-                          small: isMobile),
-                    ],
-                  ),
+                  child: _buildCard("Sender Information", Icons.person, [
+                    _textField(
+                      "Sender/Customer",
+                      controllers['senderName']!,
+                      readOnly: true,
+                    ),
+                    _textField(
+                      "Sender Address",
+                      controllers['senderAddress']!,
+                      readOnly: true,
+                    ),
+                  ]),
                 ),
                 Expanded(
-                  child: _buildCard(
-                    "Recipient Information",
-                    Icons.person_pin,
-                    [
-                      _dropdownField("Recipient/Customer",
-                          ["Customer C", "Customer D"],
-                          small: isMobile),
-                      _dropdownField("Recipient Address",
-                          ["Address 3", "Address 4"],
-                          small: isMobile),
-                    ],
-                  ),
+                  child: _buildCard("Recipient Information", Icons.person_pin, [
+                    _textField(
+                      "Recipient/Customer",
+                      controllers['receiverName']!,
+                      readOnly: (shipmentData?['receiverName'] ?? "").toString().isNotEmpty,
+                    ),
+                    _textField(
+                      "Recipient Address",
+                      controllers['address']!,
+                      readOnly: (shipmentData?['address'] ?? "").toString().isNotEmpty,
+                    ),
+                  ]),
                 ),
               ], isMobile),
 
               // Shipment Info
               _buildCard("Shipment Info", Icons.inventory, [
                 _responsiveRow([
-                  _dropdownField("Logistics Service",
-                      ["Road Freight", "Air Freight"],
+                  _safeDropdown(
+                      label: "Logistics Service",
+                      items: ["Road Freight", "Air Freight"],
+                      value: controllers['logisticsService']!.text,
+                      onChanged: (val) {
+                        setState(() {
+                          controllers['logisticsService']!.text = val ?? "";
+                        });
+                      },
                       small: isMobile),
-                  _dropdownField("Courier Company", ["YanShip"],
+                  _safeDropdown(
+                      label: "Courier Company",
+                      items: ["YanShip"],
+                      value: controllers['courierCompany']!.text,
+                      onChanged: (val) {
+                        setState(() {
+                          controllers['courierCompany']!.text = val ?? "";
+                        });
+                      },
                       small: isMobile),
                 ], isMobile),
                 _responsiveRow([
-                  _dropdownField("Delivery Time",
-                      ["Next Day", "Same Day"],
+                  _safeDropdown(
+                      label: "Delivery Time",
+                      items: ["Next Day", "Same Day"],
+                      value: controllers['deliveryTime']!.text,
+                      onChanged: (val) {
+                        setState(() {
+                          controllers['deliveryTime']!.text = val ?? "";
+                        });
+                      },
                       small: isMobile),
-                  _dropdownField("Delivery Status", [
-                    "Created",
-                    "In Transit",
-                    "Cancelled",
-                    "Confirm",
-                    "Distribution",
-                    "In Warehouse",
-                    "No answer",
-                    "Picked up",
-                    "Pickup",
-                    "Rejected",
-                    "Reported",
-                    "Retrieve",
-                    "Returned"
-                  ], small: isMobile),
+                  _safeDropdown(
+                      label: "Delivery Status",
+                      items: [
+                        "Created",
+                        "In Transit",
+                        "Cancelled",
+                        "Confirm",
+                        "Distribution",
+                        "In Warehouse",
+                        "No answer",
+                        "Picked up",
+                        "Pickup",
+                        "Rejected",
+                        "Reported",
+                        "Retrieve",
+                        "Returned"
+                      ],
+                      value: controllers['deliveryStatus']!.text,
+                      onChanged: (val) {
+                        setState(() {
+                          controllers['deliveryStatus']!.text = val ?? "";
+                        });
+                      },
+                      small: isMobile),
                 ], isMobile),
                 const SizedBox(height: 6),
                 Align(
@@ -223,8 +464,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                       return ListTile(
                         title: Text(file.name),
                         trailing: IconButton(
-                          icon:
-                          const Icon(Icons.delete, color: Colors.red),
+                          icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () => _removeFile(index),
                         ),
                       );
@@ -241,32 +481,22 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _responsiveRow([
-                          _textField("Description", pkg.description,
-                              small: isMobile, flex: 3),
-                          _textField("Quantity", pkg.quantity,
-                              isNumber: true, small: isMobile, flex: 1),
-                          _textField("Additional charge",
-                              pkg.additionalCharge,
-                              isNumber: true, small: isMobile, flex: 1),
-                          _textField("Declared value", pkg.declaredValue,
-                              isNumber: true, small: isMobile, flex: 1),
+                          _textField("Description", pkg.description, small: isMobile, flex: 3),
+                          _textField("Quantity", pkg.quantity, isNumber: true, small: isMobile, flex: 1),
+                          _textField("Additional charge", pkg.additionalCharge, isNumber: true, small: isMobile, flex: 1),
+                          _textField("Declared value", pkg.declaredValue, isNumber: true, small: isMobile, flex: 1),
                           if (index != 0)
                             IconButton(
                               onPressed: () => _removePackage(index),
-                              icon: const Icon(Icons.delete,
-                                  color: Colors.red),
+                              icon: const Icon(Icons.delete, color: Colors.red),
                             ),
                         ], isMobile),
                         const SizedBox(height: 8),
                         _responsiveRow([
-                          _textField("Weight", pkg.weight,
-                              isNumber: true, small: isMobile),
-                          _textField("Length", pkg.length,
-                              isNumber: true, small: isMobile),
-                          _textField("Width", pkg.width,
-                              isNumber: true, small: isMobile),
-                          _textField("Height", pkg.height,
-                              isNumber: true, small: isMobile),
+                          _textField("Weight", pkg.weight, isNumber: true, small: isMobile),
+                          _textField("Length", pkg.length, isNumber: true, small: isMobile),
+                          _textField("Width", pkg.width, isNumber: true, small: isMobile),
+                          _textField("Height", pkg.height, isNumber: true, small: isMobile),
                         ], isMobile),
                         const SizedBox(height: 8),
                         if (index != packages.length - 1) const Divider(),
@@ -284,25 +514,38 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 _responsiveRow([
-                  _textField("Total Value", totalValue,
-                      readOnly: true, isNumber: true, small: isMobile),
-                  _textField("Total Price", totalPrice,
-                      readOnly: true, isNumber: true, small: isMobile),
+                  _textField("Total Value", totalValue, readOnly: true, isNumber: true, small: isMobile),
+                  _textField("Total Price", totalPrice, readOnly: true, isNumber: true, small: isMobile),
                 ], isMobile),
               ]),
 
               // Driver
               _buildCard("Assign Driver", Icons.drive_eta, [
-                _dropdownField("Driver", ["Driver 1", "Driver 2"],
-                    small: isMobile),
+                Row(
+                  children: [
+                    Flexible(
+                      child: _safeDropdown(
+                        label: "Driver",
+                        items: drivers.map((d) => d['label']?.toString() ?? "").toList(),
+                        value: selectedDriver,
+                        onChanged: (val) {
+                          setState(() {
+                            selectedDriver = val;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
               ]),
+
 
               const SizedBox(height: 16),
               Center(
@@ -312,17 +555,9 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green.shade600,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 40, vertical: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                   ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  "Shipment Created Successfully!")));
-                    }
-                  },
+                  onPressed: _saveShipment,
                 ),
               ),
             ],
@@ -332,7 +567,8 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
     );
   }
 
-  // Helpers
+  // ------------------ Helpers ------------------
+
   Widget _responsiveRow(List<Widget> children, bool isMobile) {
     if (isMobile) {
       return Column(
@@ -346,11 +582,12 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       );
     } else {
       return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: children
-            .map((w) => Expanded(
+            .map((w) => Flexible( // <- use Flexible instead of Expanded
+          fit: FlexFit.tight,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 4, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: w,
           ),
         ))
@@ -363,8 +600,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 5),
       elevation: 3,
-      shape:
-      RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -373,8 +609,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: Colors.grey.shade800,
-              borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(8)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
             ),
             child: Row(
               children: [
@@ -382,9 +617,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                 const SizedBox(width: 6),
                 Text(title,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16)),
+                        color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
               ],
             ),
           ),
@@ -398,10 +631,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
   }
 
   Widget _textField(String label, TextEditingController controller,
-      {bool isNumber = false,
-        bool readOnly = false,
-        bool small = false,
-        int flex = 1}) {
+      {bool isNumber = false, bool readOnly = false, bool small = false, int flex = 1}) {
     return SizedBox(
       height: small ? 40 : 50,
       child: TextFormField(
@@ -410,40 +640,66 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         decoration: InputDecoration(
           isDense: true,
-          contentPadding:
-          const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
           labelText: label,
           border: const OutlineInputBorder(),
           filled: true,
-          fillColor:
-          readOnly ? Colors.grey.shade200 : Colors.grey.shade100,
+          fillColor: readOnly ? Colors.grey.shade200 : Colors.grey.shade100,
         ),
-        validator: (val) =>
-        val == null || val.isEmpty ? "Enter $label" : null,
+        validator: (val) => val == null || val.isEmpty ? "Enter $label" : null,
         onChanged: (_) => _calculateTotals(),
       ),
     );
   }
 
-  Widget _dropdownField(String label, List<String> items,
-      {bool small = false}) {
+  Widget _safeDropdown({required String label, required List<String> items, String? value, bool small = false, Function(String?)? onChanged}) {
+    final filteredItems = items.where((e) => e.isNotEmpty).toSet().toList();
+    final safeValue = (value != null && filteredItems.contains(value)) ? value : null;
     return SizedBox(
       height: small ? 40 : 50,
       child: DropdownButtonFormField<String>(
-        isDense: true,
+        value: safeValue,
         decoration: InputDecoration(
-          contentPadding:
-          const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
           labelText: label,
           border: const OutlineInputBorder(),
           filled: true,
           fillColor: Colors.grey.shade100,
         ),
-        items: items
-            .map((e) =>
-            DropdownMenuItem(value: e, child: Text(e)))
+        items: filteredItems
+            .map((e) => DropdownMenuItem(
+          value: e,
+          child: Text(
+            e,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ))
             .toList(),
-        onChanged: (val) {},
+        onChanged: onChanged,
+        validator: (val) => (filteredItems.isNotEmpty && val == null) ? "Select $label" : null,
+      ),
+    );
+  }
+
+  Widget _dropdownTrackingField(String label, List<String> items) {
+    final filteredItems = items.where((e) => e.isNotEmpty).toSet().toList();
+    final safeValue = (selectedTracking != null && filteredItems.contains(selectedTracking))
+        ? selectedTracking
+        : null;
+    return SizedBox(
+      height: 50,
+      child: DropdownButtonFormField<String>(
+        value: safeValue,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          filled: true,
+          fillColor: Colors.grey.shade100,
+        ),
+        items: filteredItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+        onChanged: (val) {
+          if (val != null) _onSelectShipment(val);
+        },
         validator: (val) => val == null ? "Select $label" : null,
       ),
     );
