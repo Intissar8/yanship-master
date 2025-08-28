@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:yanship/register_client_screen.dart';
 import 'package:yanship/register_driver_screen.dart';
 import 'package:yanship/register_screen.dart';
+import 'Shipmrnt_admin_page.dart';
 import 'acceuil.dart';
 import 'add_shipment_screen.dart';
 import 'create_shipp_admin.dart';
@@ -70,7 +71,7 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: ShipmentFormStyledPage(),
+      home: ShipmentsTablePage(),
     );
   }
 }
