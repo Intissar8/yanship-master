@@ -182,22 +182,9 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
       return;
     }
 
-    final shipmentData = {
-      'city': selectedCity,
-      'receiverName': receiverNameController.text.trim(),
-      'address': addressController.text.trim(),
-      'phone': phoneController.text.trim(),
-      'price': priceController.text.trim(),
-      'dontAuthorize': dontAuthorize,
-      'clientId': user.uid,
-      'driverId': null,
-      'status': isEditMode ? FieldValue.delete() : 'created',
-      'createdAt': isEditMode ? FieldValue.delete() : FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-
     try {
       if (isEditMode) {
+        // Just update editable fields
         await FirebaseFirestore.instance
             .collection('shipments')
             .doc(widget.shipmentId)
@@ -218,6 +205,52 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
           ),
         );
       } else {
+        // Generate tracking number format: AWB0000001, AWB0000002, ...
+        final counterRef = FirebaseFirestore.instance.collection('counters').doc('shipments');
+        final counterSnap = await counterRef.get();
+
+        int nextNumber = 1;
+        if (counterSnap.exists) {
+          nextNumber = (counterSnap.data()!['lastNumber'] ?? 0) + 1;
+        }
+
+        await counterRef.set({'lastNumber': nextNumber}, SetOptions(merge: true));
+        final trackingNumber = 'AWB${nextNumber.toString().padLeft(7, '0')}';
+
+        final shipmentData = {
+          // --- existing fields ---
+          'city': selectedCity,
+          'receiverName': receiverNameController.text.trim(),
+          'address': addressController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'price': priceController.text.trim(),
+          'dontAuthorize': dontAuthorize,
+          'clientId': user.uid,
+          'driverId': null,
+          'status': 'created',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+
+          // --- new hidden fields ---
+          'trackingNumber': trackingNumber,
+          'agencyList': null,
+          'originOffice': null,
+          'logisticsService': null,
+          'deliveryTime': null,
+          'courierCompany': null,
+          'deliveryStatus': null,
+
+          // Packages: list of maps (empty at first)
+          'packages': [],
+
+          // Totals
+          'totalValue': 0,
+          'totalPrice': 0,
+
+          // Files: list of strings (empty at first)
+          'files': [],
+        };
+
         await FirebaseFirestore.instance.collection('shipments').add(shipmentData);
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -233,6 +266,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
