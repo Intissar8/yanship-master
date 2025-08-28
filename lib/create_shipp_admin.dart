@@ -68,7 +68,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
         final lastName = doc['lastName'] ?? '';
         final address = doc['addresses']?[0]?['address'] ?? '';
         return {
-          'label': "$address - $firstName $lastName",
+          'label': "$address-$lastName",
           'name': "$firstName $lastName",
           'address': address,
           'id': doc.id,
@@ -481,22 +481,26 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _responsiveRow([
-                          _textField("Description", pkg.description, small: isMobile, flex: 3),
-                          _textField("Quantity", pkg.quantity, isNumber: true, small: isMobile, flex: 1),
-                          _textField("Additional charge", pkg.additionalCharge, isNumber: true, small: isMobile, flex: 1),
-                          _textField("Declared value", pkg.declaredValue, isNumber: true, small: isMobile, flex: 1),
+                          Expanded(flex: 3, child: _textField("Description", pkg.description, small: isMobile)),
+                          Expanded(flex: 1, child: _textField("Quantity", pkg.quantity, isNumber: true, small: isMobile)),
+                          Expanded(flex: 1, child: _textField("Additional charge", pkg.additionalCharge, isNumber: true, small: isMobile)),
+                          Expanded(flex: 1, child: _textField("Declared value", pkg.declaredValue, isNumber: true, small: isMobile)),
                           if (index != 0)
-                            IconButton(
-                              onPressed: () => _removePackage(index),
-                              icon: const Icon(Icons.delete, color: Colors.red),
+                            SizedBox(
+                              width: 40, // fixed space for delete button
+                              child: IconButton(
+                                onPressed: () => _removePackage(index),
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                              ),
                             ),
                         ], isMobile),
+
                         const SizedBox(height: 8),
                         _responsiveRow([
-                          _textField("Weight", pkg.weight, isNumber: true, small: isMobile),
-                          _textField("Length", pkg.length, isNumber: true, small: isMobile),
-                          _textField("Width", pkg.width, isNumber: true, small: isMobile),
-                          _textField("Height", pkg.height, isNumber: true, small: isMobile),
+                          Expanded(child: _textField("Weight", pkg.weight, isNumber: true, small: isMobile)),
+                          Expanded(child: _textField("Length", pkg.length, isNumber: true, small: isMobile)),
+                          Expanded(child: _textField("Width", pkg.width, isNumber: true, small: isMobile)),
+                          Expanded(child: _textField("Height", pkg.height, isNumber: true, small: isMobile)),
                         ], isMobile),
                         const SizedBox(height: 8),
                         if (index != packages.length - 1) const Divider(),
@@ -527,9 +531,10 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
 
               // Driver
               _buildCard("Assign Driver", Icons.drive_eta, [
-                Row(
-                  children: [
-                    Flexible(
+                _responsiveRow([
+                  Flexible(
+                    child: SizedBox(
+                      width: isMobile ? double.infinity : 250, // limit width on desktop
                       child: _safeDropdown(
                         label: "Driver",
                         items: drivers.map((d) => d['label']?.toString() ?? "").toList(),
@@ -539,12 +544,15 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                             selectedDriver = val;
                           });
                         },
+                        small: isMobile,
                       ),
                     ),
-                  ],
-                ),
-
+                  ),
+                ], isMobile),
               ]),
+
+
+
 
 
               const SizedBox(height: 16),
@@ -637,6 +645,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       child: TextFormField(
         controller: controller,
         readOnly: readOnly,
+        style: const TextStyle(overflow: TextOverflow.ellipsis),
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         decoration: InputDecoration(
           isDense: true,
