@@ -43,7 +43,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
   void initState() {
     super.initState();
     _initControllers();
-    _addPackage();
+    _addPackage(); // default package if no packages exist yet
     _loadTrackingNumbers();
     _loadDrivers();
   }
@@ -93,6 +93,8 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       shipmentData = null;
       clientData = null;
       recipientData = null;
+      packages.clear();
+      attachedFiles.clear();
     });
 
     final snap = await FirebaseFirestore.instance
@@ -109,6 +111,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
         selectedShipmentDocId = doc.id;
       });
 
+      // Load client data
       if (data['clientId'] != null) {
         final clientSnap = await FirebaseFirestore.instance
             .collection('clients')
@@ -117,6 +120,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
         if (clientSnap.exists) clientData = clientSnap.data();
       }
 
+      // Load recipient data
       if (data['recipientId'] != null) {
         final recSnap = await FirebaseFirestore.instance
             .collection('clients')
@@ -125,7 +129,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
         if (recSnap.exists) recipientData = recSnap.data();
       }
 
-      // Initialize controllers safely
+      // Initialize controllers
       controllers['receiverName']!.text = shipmentData?['receiverName'] ?? "";
       controllers['address']!.text = shipmentData?['address'] ?? "";
       controllers['logisticsService']!.text = shipmentData?['logisticsService'] ?? "";
@@ -137,6 +141,38 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       controllers['senderAddress']!.text = clientData?['addresses']?[0]?['address'] ?? '';
 
       selectedDriver = shipmentData?['driver'];
+
+      // Load packages from shipmentData
+      if (shipmentData?['packages'] != null) {
+        packages = [];
+        for (var p in shipmentData!['packages']) {
+          final pkg = Package();
+          pkg.description.text = p['description'] ?? "";
+          pkg.quantity.text = (p['quantity'] ?? 1).toString();
+          pkg.additionalCharge.text = (p['additionalCharge'] ?? 0).toString();
+          pkg.declaredValue.text = (p['declaredValue'] ?? 0).toString();
+          pkg.weight.text = (p['weight'] ?? 1).toString();
+          pkg.length.text = (p['length'] ?? 1).toString();
+          pkg.width.text = (p['width'] ?? 1).toString();
+          pkg.height.text = (p['height'] ?? 1).toString();
+          pkg.quantity.addListener(_calculateTotals);
+          pkg.declaredValue.addListener(_calculateTotals);
+          pkg.additionalCharge.addListener(_calculateTotals);
+          packages.add(pkg);
+        }
+      } else {
+        _addPackage(); // fallback to at least one package
+      }
+
+      // Load attached files
+      if (shipmentData?['files'] != null) {
+        // Store file names as strings for display
+        attachedFiles = shipmentData!['files']
+            .map<XFile>((f) => XFile('')) // placeholder XFile
+            .toList();
+      }
+
+      _calculateTotals();
     }
   }
 
@@ -251,7 +287,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       "driverId": selectedDriver != null
           ? drivers.firstWhere((d) => d['label'] == selectedDriver)['id']
           : shipmentData?['driverId'],
-      "agencyList": shipmentData?['agencyList'], // ✅ Add this
+      "agencyList": shipmentData?['agencyList'],
       "originOffice": shipmentData?['originOffice'],
       "updatedAt": now,
     };
@@ -487,7 +523,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                           Expanded(flex: 1, child: _textField("Declared value", pkg.declaredValue, isNumber: true, small: isMobile)),
                           if (index != 0)
                             SizedBox(
-                              width: 40, // fixed space for delete button
+                              width: 40,
                               child: IconButton(
                                 onPressed: () => _removePackage(index),
                                 icon: const Icon(Icons.delete, color: Colors.red),
@@ -534,7 +570,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                 _responsiveRow([
                   Flexible(
                     child: SizedBox(
-                      width: isMobile ? double.infinity : 250, // limit width on desktop
+                      width: isMobile ? double.infinity : 250,
                       child: _safeDropdown(
                         label: "Driver",
                         items: drivers.map((d) => d['label']?.toString() ?? "").toList(),
@@ -550,10 +586,6 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                   ),
                 ], isMobile),
               ]),
-
-
-
-
 
               const SizedBox(height: 16),
               Center(
@@ -592,7 +624,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: children
-            .map((w) => Flexible( // <- use Flexible instead of Expanded
+            .map((w) => Flexible(
           fit: FlexFit.tight,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
