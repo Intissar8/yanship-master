@@ -28,7 +28,9 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
   final Map<String, TextEditingController> controllers = {};
 
   List<Package> packages = [];
-  List<XFile> attachedFiles = [];
+  List<XFile> attachedFiles = [];// new uploads
+  List<String> savedFileNames = [];// from Firestore
+
 
   List<String> trackingNumbers = [];
   String? selectedTracking;
@@ -165,11 +167,9 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       }
 
       // Load attached files
+      // Load attached files from Firestore
       if (shipmentData?['files'] != null) {
-        // Store file names as strings for display
-        attachedFiles = shipmentData!['files']
-            .map<XFile>((f) => XFile('')) // placeholder XFile
-            .toList();
+        savedFileNames = List<String>.from(shipmentData!['files']);
       }
 
       _calculateTotals();
@@ -267,7 +267,12 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       "height": double.tryParse(pkg.height.text) ?? 1,
     }).toList();
 
-    final fileNames = attachedFiles.map((f) => f.name).toList();
+    // Merge saved files from Firestore with newly attached ones
+    final fileNames = [
+      ...savedFileNames,                  // already in Firestore
+      ...attachedFiles.map((f) => f.name) // new uploads
+    ];
+
 
     final updatedShipment = {
       "address": controllers['address']!.text,
@@ -493,6 +498,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                     ),
                   ),
                 ),
+                // New files not yet saved
                 if (attachedFiles.isNotEmpty)
                   Column(
                     children: List.generate(attachedFiles.length, (index) {
@@ -506,6 +512,26 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                       );
                     }),
                   ),
+
+// Already saved files from Firestore
+                if (savedFileNames.isNotEmpty)
+                  Column(
+                    children: List.generate(savedFileNames.length, (index) {
+                      final fileName = savedFileNames[index];
+                      return ListTile(
+                        title: Text(fileName),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              savedFileNames.removeAt(index);
+                            });
+                          },
+                        ),
+                      );
+                    }),
+                  ),
+
               ]),
 
               // Package Info
