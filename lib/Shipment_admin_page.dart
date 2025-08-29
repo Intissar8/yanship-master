@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'add_shipment_screen.dart';
 import 'create_shipp_admin.dart';
 
 class ShipmentsTablePage extends StatefulWidget {
@@ -42,6 +43,84 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
     super.initState();
     fetchShipments();
   }
+
+  Future<void> _showAssignDriverDialog(String shipmentId) async {
+    String? selectedDriverId;
+
+    // Fetch all active drivers
+    final driversSnapshot = await FirebaseFirestore.instance
+        .collection('drivers')
+        .where('status', isEqualTo: 'active')
+        .get();
+
+    List<Map<String, dynamic>> drivers = driversSnapshot.docs.map((doc) {
+      final data = doc.data();
+      return {
+        "id": doc.id,
+        "name": "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim()
+      };
+    }).toList();
+
+    if (drivers.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("No active drivers found")));
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Assign Driver"),
+        content: StatefulBuilder(
+          builder: (context, setState) {
+            return DropdownButtonFormField<String>(
+              value: selectedDriverId,
+              decoration: const InputDecoration(
+                labelText: "Select Driver",
+                border: OutlineInputBorder(),
+              ),
+              items: drivers
+                  .map((d) => DropdownMenuItem<String>(
+                value: d["id"] as String,
+                child: Text(d["name"] as String),
+              ))
+                  .toList(),
+              onChanged: (val) => setState(() => selectedDriverId = val),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel")),
+          ElevatedButton(
+              onPressed: () async {
+                if (selectedDriverId == null) return;
+
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('shipments')
+                      .doc(shipmentId)
+                      .update({'driverId': selectedDriverId});
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Driver assigned successfully")));
+
+                  Navigator.pop(context);
+
+                  // Refresh shipments list
+                  fetchShipments();
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error assigning driver: $e")));
+                }
+              },
+              child: const Text("Assign")),
+        ],
+      ),
+    );
+  }
+
 
   Future<void> fetchShipments() async {
     final snapshot = await FirebaseFirestore.instance.collection('shipments').get();
@@ -321,31 +400,40 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
         PopupMenuButton<String>(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           icon: const Icon(Icons.more_vert, color: Colors.black),
-          itemBuilder: (context) => [
-            _menuItem("Delivered", Icons.check_circle, Colors.green),
-            _menuItem("Picked up", Icons.handshake, Colors.lightGreen),
-            _menuItem("No answer", Icons.call_missed, Colors.orange),
-            _menuItem("Reported", Icons.report, Colors.amber),
-            _menuItem("Rejected", Icons.block, Colors.redAccent),
-            _menuItem("Cancelled", Icons.cancel, Colors.red),
-            _menuItem("Created", Icons.add_circle_outline, Colors.blueGrey),
-            _menuItem("In Transit", Icons.local_shipping, Colors.lightBlue),
-            _menuItem("Confirm", Icons.check_circle, Colors.teal),
-            _menuItem("Distribution", Icons.apartment, Colors.deepPurple),
-            _menuItem("In Warehouse", Icons.warehouse, Colors.brown),
-            _menuItem("Pickup", Icons.store_mall_directory, Colors.indigo),
-            _menuItem("Retrieve", Icons.assignment_return, Colors.cyan),
-            _menuItem("Returned", Icons.keyboard_return, Colors.purple),
-            const PopupMenuDivider(),
-            _menuItem("Driver Paid", Icons.account_balance_wallet, Colors.tealAccent),
-            _menuItem("Customer Paid", Icons.payment, Colors.indigoAccent),
-            _menuItem("Driver Not Paid", Icons.warning, Colors.orangeAccent),
-            _menuItem("Customer Not Paid", Icons.error, Colors.redAccent),
-            const PopupMenuDivider(),
-            _menuItem("Edit Shipment", Icons.edit, Colors.black87),
-            _menuItem("Print Label", Icons.print, Colors.black87),
-            _menuItem("Send Mail", Icons.mail, Colors.black87),
-          ],
+          itemBuilder: (context) {
+            List<PopupMenuEntry<String>> items = [
+              _menuItem("Delivered", Icons.check_circle, Colors.green),
+              _menuItem("Picked up", Icons.handshake, Colors.lightGreen),
+              _menuItem("No answer", Icons.call_missed, Colors.orange),
+              _menuItem("Reported", Icons.report, Colors.amber),
+              _menuItem("Rejected", Icons.block, Colors.redAccent),
+              _menuItem("Cancelled", Icons.cancel, Colors.red),
+              _menuItem("Created", Icons.add_circle_outline, Colors.blueGrey),
+              _menuItem("In Transit", Icons.local_shipping, Colors.lightBlue),
+              _menuItem("Confirm", Icons.check_circle, Colors.teal),
+              _menuItem("Distribution", Icons.apartment, Colors.deepPurple),
+              _menuItem("In Warehouse", Icons.warehouse, Colors.brown),
+              _menuItem("Pickup", Icons.store_mall_directory, Colors.indigo),
+              _menuItem("Retrieve", Icons.assignment_return, Colors.cyan),
+              _menuItem("Returned", Icons.keyboard_return, Colors.purple),
+              const PopupMenuDivider(),
+              _menuItem("Driver Paid", Icons.account_balance_wallet, Colors.tealAccent),
+              _menuItem("Customer Paid", Icons.payment, Colors.indigoAccent),
+              _menuItem("Driver Not Paid", Icons.warning, Colors.orangeAccent),
+              _menuItem("Customer Not Paid", Icons.error, Colors.redAccent),
+              const PopupMenuDivider(),
+              _menuItem("Edit Shipment", Icons.edit, Colors.black87),
+              _menuItem("Print Label", Icons.print, Colors.black87),
+              _menuItem("Send Mail", Icons.mail, Colors.black87),
+            ];
+
+            // Only show "Assign Driver" if status is "Confirm"
+            if (shipment["status"] == "Confirm") {
+              items.add(_menuItem("Assign Driver", Icons.drive_eta, Colors.teal));
+            }
+
+            return items;
+          },
           onSelected: (value) async {
             if (statusColors.containsKey(value)) {
               setState(() {
@@ -362,13 +450,28 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                   SnackBar(content: Text("Error updating Firestore: $e")),
                 );
               }
+            } else if (value == "Assign Driver") {
+              _showAssignDriverDialog(shipment["id"]);
+            } else if (value == "Edit Shipment") {
+              // Navigate to AddShipmentScreen with the shipment ID
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddShipmentScreen(
+                    shipmentId: shipment["id"],
+                    currentLang: 'en', // or pass the appropriate language
+                  ),
+                ),
+              );
             } else {
               ScaffoldMessenger.of(context)
                   .showSnackBar(SnackBar(content: Text("Action: $value")));
             }
           },
+
         ),
       ),
+
     ]);
   }
 
