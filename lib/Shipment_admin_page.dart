@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'add_shipment_screen.dart';
 import 'create_shipp_admin.dart';
 
@@ -43,6 +44,76 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
     super.initState();
     fetchShipments();
   }
+
+  Future<void> _sendWhatsAppMessage(String shipmentId) async {
+    try {
+      final shipmentDoc = await FirebaseFirestore.instance
+          .collection('shipments')
+          .doc(shipmentId)
+          .get();
+      final shipment = shipmentDoc.data();
+      if (shipment == null) return;
+
+      final driverId = shipment['driverId'];
+      if (driverId == null || driverId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No driver assigned to this shipment")),
+        );
+        return;
+      }
+
+      final driverDoc = await FirebaseFirestore.instance
+          .collection('drivers')
+          .doc(driverId)
+          .get();
+      final driver = driverDoc.data();
+      if (driver == null || driver['phone'] == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Driver has no phone number saved")),
+        );
+        return;
+      }
+
+      // --- FIX: format phone number ---
+      String phone = driver['phone'].toString().trim();
+
+      // if phone starts with 0, replace with country code (example: Morocco +212)
+      if (phone.startsWith("0")) {
+        phone = "+212${phone.substring(1)}";
+      }
+
+      // make sure it starts with + (international format)
+      if (!phone.startsWith("+")) {
+        phone = "+$phone";
+      }
+
+      final tracking = shipment['trackingNumber'] ?? '';
+      final address = shipment['address'] ?? '';
+      final city = shipment['city'] ?? '';
+
+      final message =
+          "Hello ${driver['firstName'] ?? ''},\n\n"
+          "A new shipment has been assigned to you.\n\n"
+          " Tracking: $tracking\n"
+          " Address: $address, $city\n\n"
+          "Please proceed with the delivery.";
+
+      final url =
+          "https://wa.me/${phone.replaceAll("+", "")}?text=${Uri.encodeComponent(message)}";
+
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      } else {
+        throw "Could not open WhatsApp";
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error sending WhatsApp message: $e")),
+      );
+    }
+  }
+
+
 
   Future<void> _showAssignDriverDialog(String shipmentId) async {
     String? selectedDriverId;
@@ -463,6 +534,8 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                   ),
                 ),
               );
+            }else if (value == "Send Mail") {
+              _sendWhatsAppMessage(shipment["id"]);
             } else {
               ScaffoldMessenger.of(context)
                   .showSnackBar(SnackBar(content: Text("Action: $value")));
