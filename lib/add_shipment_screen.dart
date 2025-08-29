@@ -239,6 +239,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
           'deliveryTime': null,
           'courierCompany': null,
           'deliveryStatus': null,
+          'secondAdminValue': null,
 
           // Packages: list of maps (empty at first)
           'packages': [],
