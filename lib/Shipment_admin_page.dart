@@ -10,29 +10,32 @@ class ShipmentsTablePage extends StatefulWidget {
 }
 
 class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
+  List<Map<String, dynamic>> allShipments = [];
   List<Map<String, dynamic>> shipments = [];
 
-  final Map<String, Color> statusColors = {
-    "Created": Colors.blueGrey,          // Created shipments
-    "In Transit": Colors.lightBlue,      // Shipments on the way
-    "Cancelled": Colors.red,             // Cancelled shipments
-    "Confirm": Colors.teal,              // Confirmed shipments
-    "Distribution": Colors.deepPurple,   // Out for distribution
-    "In Warehouse": Colors.brown,        // In warehouse
-    "No answer": Colors.orange,          // No answer from customer
-    "Picked up": Colors.lightGreen,      // Picked up
-    "Pickup": Colors.indigo,             // Pickup status
-    "Rejected": Colors.redAccent,        // Rejected shipments
-    "Reported": Colors.amber,            // Reported issues
-    "Retrieve": Colors.cyan,             // Retrieve shipments
-    "Returned": Colors.purple,           // Returned shipments
-    "Delivered": Colors.green,           // Delivered shipments
-    "Driver Paid": Colors.tealAccent,    // Driver Paid
-    "Customer Paid": Colors.indigoAccent,// Customer Paid
-    "Driver Not Paid": Colors.orangeAccent,// Driver Not Paid
-    "Customer Not Paid": Colors.redAccent,// Customer Not Paid
-  };
+  String? selectedStatus;
+  String trackingFilter = "";
 
+  final Map<String, Color> statusColors = {
+    "Created": Colors.blueGrey,
+    "In Transit": Colors.lightBlue,
+    "Cancelled": Colors.red,
+    "Confirm": Colors.teal,
+    "Distribution": Colors.deepPurple,
+    "In Warehouse": Colors.brown,
+    "No answer": Colors.orange,
+    "Picked up": Colors.lightGreen,
+    "Pickup": Colors.indigo,
+    "Rejected": Colors.redAccent,
+    "Reported": Colors.amber,
+    "Retrieve": Colors.cyan,
+    "Returned": Colors.purple,
+    "Delivered": Colors.green,
+    "Driver Paid": Colors.tealAccent,
+    "Customer Paid": Colors.indigoAccent,
+    "Driver Not Paid": Colors.orangeAccent,
+    "Customer Not Paid": Colors.redAccent,
+  };
 
   @override
   void initState() {
@@ -42,7 +45,6 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
 
   Future<void> fetchShipments() async {
     final snapshot = await FirebaseFirestore.instance.collection('shipments').get();
-
     final List<Map<String, dynamic>> tempList = [];
 
     for (var doc in snapshot.docs) {
@@ -63,7 +65,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
       }
 
       tempList.add({
-        "id": doc.id, // store the Firestore document ID
+        "id": doc.id,
         "sender": senderName,
         "driver": driverName,
         "receiver": data['receiverName']?.toString() ?? "-",
@@ -71,16 +73,31 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
         "price": data['totalPrice']?.toString() ?? data['price']?.toString() ?? "-",
         "fee": fee.toString(),
         "status": data['deliveryStatus']?.toString() ?? "-",
+        "trackingNumber": data['trackingNumber']?.toString() ?? "",
         "statusColor": statusColors[data['deliveryStatus']] ?? Colors.grey,
         "selectedStatus": data['secondAdminValue']?.toString() ?? "",
       });
     }
 
     setState(() {
-      shipments = tempList;
+      allShipments = tempList;
+      applyFilters();
     });
   }
 
+  void applyFilters() {
+    setState(() {
+      shipments = allShipments.where((s) {
+        final statusMatch = selectedStatus == null || selectedStatus!.isEmpty
+            ? true
+            : s['status'] == selectedStatus;
+        final trackingMatch = trackingFilter.isEmpty
+            ? true
+            : s['trackingNumber'].toLowerCase().contains(trackingFilter.toLowerCase());
+        return statusMatch && trackingMatch;
+      }).toList();
+    });
+  }
 
   Future<String> getClientName(String? clientId) async {
     if (clientId == null) return "-";
@@ -97,8 +114,6 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
     final data = doc.data() ?? {};
     return "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -117,11 +132,20 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildSearchBox("Search tracking", icon: Icons.search, width: 200),
+                _buildSearchBox(
+                  "Search tracking",
+                  icon: Icons.search,
+                  width: 200,
+                  onChanged: (val) {
+                    trackingFilter = val;
+                    applyFilters();
+                  },
+                ),
                 const SizedBox(width: 12),
                 _buildDropdown(
                   hint: "-- Select shipping status --",
                   items: {
+                    "All": Icons.list,
                     "Created": Icons.add_circle_outline,
                     "In Transit": Icons.local_shipping,
                     "Cancelled": Icons.cancel,
@@ -135,6 +159,14 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                     "Reported": Icons.report,
                     "Retrieve": Icons.assignment_return,
                     "Returned": Icons.keyboard_return,
+                  },
+                  onChanged: (val) {
+                    if (val == "All") {
+                      selectedStatus = null; // clears the filter
+                    } else {
+                      selectedStatus = val;
+                    }
+                    applyFilters();
                   },
                 ),
                 const SizedBox(width: 12),
@@ -192,10 +224,12 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
     );
   }
 
-  Widget _buildSearchBox(String hint, {IconData? icon, double? width}) {
+  Widget _buildSearchBox(String hint,
+      {IconData? icon, double? width, Function(String)? onChanged}) {
     return SizedBox(
       width: width,
       child: TextField(
+        onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(color: Colors.black54),
@@ -212,7 +246,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
     );
   }
 
-  Widget _buildDropdown({required String hint, required Map<String, IconData> items}) {
+  Widget _buildDropdown({required String hint, required Map<String, IconData> items, Function(String?)? onChanged}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -222,6 +256,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
+          value: selectedStatus,
           hint: Text(hint, style: const TextStyle(color: Colors.black54)),
           items: items.entries
               .map((e) => DropdownMenuItem(
@@ -235,7 +270,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
             ),
           ))
               .toList(),
-          onChanged: (val) {},
+          onChanged: onChanged,
         ),
       ),
     );
@@ -317,7 +352,6 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                 shipments[index]["selectedStatus"] = value;
               });
 
-              // Update Firestore
               try {
                 await FirebaseFirestore.instance
                     .collection('shipments')
@@ -337,8 +371,6 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
       ),
     ]);
   }
-
-
 
   PopupMenuItem<String> _menuItem(String text, IconData icon, Color color) {
     return PopupMenuItem(
