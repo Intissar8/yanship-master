@@ -8,6 +8,7 @@ import 'package:yanship/register_screen.dart';
 import 'Shipment_admin_page.dart';
 import 'acceuil.dart';
 import 'add_shipment_screen.dart';
+import 'adminProfileScreen.dart';
 import 'create_shipp_admin.dart';
 import 'customer_form1.dart';
 import 'customer_form3.dart';
@@ -71,7 +72,7 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: ShipmentsTablePage(),
+      home: AdminProfileScreen(),
     );
   }
 }

@@ -3,8 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'PrintLabelPage.dart';
 import 'add_shipment_screen.dart';
+import 'adminProfileScreen.dart';
 import 'create_shipp_admin.dart';
 import 'package:fl_chart/fl_chart.dart';
+
+import 'login_screen.dart';
 
 class ShipmentsTablePage extends StatefulWidget {
   const ShipmentsTablePage({super.key});
@@ -350,11 +353,166 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Shipments", style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.lightBlue[100],
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        titleSpacing: 16,
+        title: Row(
+          children: [
+            // Company logo
+            Image.asset(
+              'assets/images/logo.png',
+              height: 40,
+            ),
+            const SizedBox(width: 24),
+
+            // Shipments Dropdown
+            PopupMenuButton<String>(
+              child: Row(
+                children: [
+                  Icon(Icons.local_shipping, color: Colors.grey[800], size: 22),
+                  const SizedBox(width: 6),
+                  Text('Shipments', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w500)),
+                  Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
+                ],
+              ),
+              onSelected: (value) {
+                if (value == 'Create Shipment') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ShipmentFormStyledPage()),
+                  );
+                } else if (value == 'Shipment List') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ShipmentsTablePage()),
+                  );
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'Create Shipment',
+                  child: Row(
+                    children: [Icon(Icons.add), SizedBox(width: 8), Text('Create Shipment')],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'Shipment List',
+                  child: Row(
+                    children: [Icon(Icons.list), SizedBox(width: 8), Text('Shipment List')],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(width: 24),
+
+            // Users Dropdown
+            PopupMenuButton<String>(
+              child: Row(
+                children: [
+                  Icon(Icons.person, color: Colors.grey[800], size: 22),
+                  const SizedBox(width: 6),
+                  Text('Users', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w500)),
+                  Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
+                ],
+              ),
+              onSelected: (value) {
+                if (value == 'Customer List') {
+                  // Navigate to customer list page
+                } else if (value == 'Driver List') {
+                  // Navigate to driver list page
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'Customer List',
+                  child: Row(
+                    children: [Icon(Icons.people), SizedBox(width: 8), Text('Customer List')],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'Driver List',
+                  child: Row(
+                    children: [Icon(Icons.drive_eta), SizedBox(width: 8), Text('Driver List')],
+                  ),
+                ),
+              ],
+            ),
+
+            const Spacer(),
+
+            // Language Dropdown
+            DropdownButton<String>(
+              value: 'English',
+              underline: const SizedBox(),
+              icon: const Icon(Icons.language, color: Colors.grey),
+              onChanged: (value) {
+                // Handle language change
+              },
+              items: const [
+                DropdownMenuItem(value: 'English', child: Text('English')),
+                DropdownMenuItem(value: 'French', child: Text('French')),
+                DropdownMenuItem(value: 'Arabic', child: Text('Arabic')),
+              ],
+            ),
+
+            const SizedBox(width: 12),
+
+            // Profile Circle with View Profile + Logout
+            PopupMenuButton<String>(
+              offset: const Offset(0, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              onSelected: (value) async {
+                if (value == 'profile') {
+                  // Navigate to profile screen
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminProfileScreen()),
+                  );
+
+
+                } else if (value == 'logout') {
+                  // Sign out and go to LoginScreen
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('View Profile'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Logout'),
+                    ],
+                  ),
+                ),
+              ],
+              child: const CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.blue,
+                child: Icon(Icons.person, color: Colors.white, size: 20),
+              ),
+            ),
+          ],
+        ),
       ),
+
+
+
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
