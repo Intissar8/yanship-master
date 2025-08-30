@@ -174,13 +174,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
   Future<void> submitShipment() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_t("user_not_logged", widget.currentLang))),
-      );
-      return;
-    }
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? "anonymous";
 
     try {
       if (isEditMode) {
@@ -225,7 +219,7 @@ class _AddShipmentScreenState extends State<AddShipmentScreen> {
           'phone': phoneController.text.trim(),
           'price': priceController.text.trim(),
           'dontAuthorize': dontAuthorize,
-          'clientId': user.uid,
+          'clientId': userId,
           'driverId': null,
           'status': 'created',
           'createdAt': FieldValue.serverTimestamp(),

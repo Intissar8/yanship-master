@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'PrintLabelPage.dart';
 import 'add_shipment_screen.dart';
 import 'create_shipp_admin.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class ShipmentsTablePage extends StatefulWidget {
   const ShipmentsTablePage({super.key});
@@ -43,8 +44,82 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
   @override
   void initState() {
     super.initState();
-    fetchShipments();
+
   }
+  Map<String, int> getShipmentStatusCounts() {
+    final Map<String, int> counts = {};
+    for (var s in allShipments) {
+      final status = s['status'] ?? 'Unknown';
+      counts[status] = (counts[status] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+
+  Widget buildStatusHistogramFromData(List<Map<String, dynamic>> shipmentsData) {
+    final counts = <String, int>{};
+    for (var s in shipmentsData) {
+      final status = s['status'] ?? 'Unknown';
+      counts[status] = (counts[status] ?? 0) + 1;
+    }
+
+    final barGroups = <BarChartGroupData>[];
+    int i = 0;
+    counts.forEach((status, count) {
+      barGroups.add(
+        BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(
+              toY: count.toDouble(),
+              color: statusColors[status] ?? Colors.grey,
+              width: 20,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ],
+        ),
+      );
+      i++;
+    });
+
+    return SizedBox(
+      height: 150,
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: (counts.values.isEmpty
+              ? 1
+              : counts.values.reduce((a, b) => a > b ? a : b))
+              .toDouble() + 1,
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: true),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (double value, TitleMeta meta) {
+                  final index = value.toInt();
+                  if (index < 0 || index >= counts.keys.length) return const SizedBox();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      counts.keys.elementAt(index),
+                      style: const TextStyle(fontSize: 10),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          barGroups: barGroups,
+        ),
+      ),
+    );
+  }
+
+
 
   Future<void> _sendWhatsAppMessage(String shipmentId) async {
     try {
@@ -181,7 +256,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                   Navigator.pop(context);
 
                   // Refresh shipments list
-                  fetchShipments();
+
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Error assigning driver: $e")));
@@ -194,48 +269,51 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
   }
 
 
-  Future<void> fetchShipments() async {
-    final snapshot = await FirebaseFirestore.instance.collection('shipments').get();
-    final List<Map<String, dynamic>> tempList = [];
+  Stream<List<Map<String, dynamic>>> shipmentStream() {
+    return FirebaseFirestore.instance
+        .collection('shipments')
+        .snapshots()
+        .asyncMap((snapshot) async {
+      final List<Map<String, dynamic>> tempList = [];
 
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
 
-      // Extract sender safely
-      final clientId = data['clientId'] as String?;
-      final senderName = clientId != null ? await getClientName(clientId) : "-";
+        // Sender name
+        final clientId = data['clientId'] as String?;
+        final senderName = clientId != null ? await getClientName(clientId) : "-";
 
-      // Extract driver safely
-      final driverId = data['driverId'] as String?;
-      final driverName = driverId != null ? await getDriverName(driverId) : "-";
+        // Driver name
+        final driverId = data['driverId'] as String?;
+        final driverName = driverId != null ? await getDriverName(driverId) : "-";
 
-      // Extract packages safely
-      double fee = 0;
-      if (data['packages'] != null && (data['packages'] as List).isNotEmpty) {
-        fee = (data['packages'][0]['additionalCharge'] ?? 0).toDouble();
+        // Fee
+        double fee = 0;
+        if (data['packages'] != null && (data['packages'] as List).isNotEmpty) {
+          fee = (data['packages'][0]['additionalCharge'] ?? 0).toDouble();
+        }
+
+        tempList.add({
+          "id": doc.id,
+          "sender": senderName,
+          "driver": driverName,
+          "receiver": data['receiverName']?.toString() ?? "-",
+          "city": data['city']?.toString() ?? "-",
+          "address": data['address']?.toString() ?? "-",
+          "price": data['totalPrice']?.toString() ?? data['price']?.toString() ?? "-",
+          "fee": fee.toString(),
+          "status": data['deliveryStatus']?.toString() ?? "-",
+          "trackingNumber": data['trackingNumber']?.toString() ?? "",
+          "statusColor": statusColors[data['deliveryStatus']] ?? Colors.grey,
+          "selectedStatus": data['secondAdminValue']?.toString() ?? "",
+        });
       }
 
-      tempList.add({
-        "id": doc.id,
-        "sender": senderName,
-        "driver": driverName,
-        "receiver": data['receiverName']?.toString() ?? "-",
-        "city": data['city']?.toString() ?? "-",
-        "address": data['address']?.toString() ?? "-",
-        "price": data['totalPrice']?.toString() ?? data['price']?.toString() ?? "-",
-        "fee": fee.toString(),
-        "status": data['deliveryStatus']?.toString() ?? "-",
-        "trackingNumber": data['trackingNumber']?.toString() ?? "",
-        "statusColor": statusColors[data['deliveryStatus']] ?? Colors.grey,
-        "selectedStatus": data['secondAdminValue']?.toString() ?? "",
-      });
-    }
-
-    setState(() {
-      allShipments = tempList;
-      applyFilters();
+      return tempList;
     });
   }
+
+
 
   void applyFilters() {
     setState(() {
@@ -270,7 +348,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text("Shipments", style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.lightBlue[100],
@@ -281,66 +359,97 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildSearchBox(
-                  "Search tracking",
-                  icon: Icons.search,
-                  width: 200,
-                  onChanged: (val) {
-                    trackingFilter = val;
-                    applyFilters();
-                  },
+            // Filters & Add Button Card
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 4,
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildSearchBox(
+                        "Search tracking",
+                        icon: Icons.search,
+                        onChanged: (val) {
+                          trackingFilter = val;
+                          applyFilters();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildDropdown(
+                        hint: "-- Select shipping status --",
+                        items: {
+                          "All": Icons.list,
+                          "Created": Icons.add_circle_outline,
+                          "In Transit": Icons.local_shipping,
+                          "Cancelled": Icons.cancel,
+                          "Confirm": Icons.check_circle,
+                          "Distribution": Icons.apartment,
+                          "In Warehouse": Icons.warehouse,
+                          "No answer": Icons.call_missed,
+                          "Picked up": Icons.handshake,
+                          "Pickup": Icons.store_mall_directory,
+                          "Rejected": Icons.block,
+                          "Reported": Icons.report,
+                          "Retrieve": Icons.assignment_return,
+                          "Returned": Icons.keyboard_return,
+                        },
+                        onChanged: (val) {
+                          selectedStatus = val == "All" ? null : val;
+                          applyFilters();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.lightBlue[400],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        elevation: 3,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ShipmentFormStyledPage()),
+                        );
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text("Add Shipment", style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                _buildDropdown(
-                  hint: "-- Select shipping status --",
-                  items: {
-                    "All": Icons.list,
-                    "Created": Icons.add_circle_outline,
-                    "In Transit": Icons.local_shipping,
-                    "Cancelled": Icons.cancel,
-                    "Confirm": Icons.check_circle,
-                    "Distribution": Icons.apartment,
-                    "In Warehouse": Icons.warehouse,
-                    "No answer": Icons.call_missed,
-                    "Picked up": Icons.handshake,
-                    "Pickup": Icons.store_mall_directory,
-                    "Rejected": Icons.block,
-                    "Reported": Icons.report,
-                    "Retrieve": Icons.assignment_return,
-                    "Returned": Icons.keyboard_return,
-                  },
-                  onChanged: (val) {
-                    if (val == "All") {
-                      selectedStatus = null; // clears the filter
-                    } else {
-                      selectedStatus = val;
-                    }
-                    applyFilters();
-                  },
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightBlue[400],
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ShipmentFormStyledPage()),
-                    );
-                  },
-                  icon: const Icon(Icons.add, size: 20),
-                  label: const Text("Add Shipment", style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 16),
+
+            const SizedBox(height: 20),
+
+            // Histogram Card
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 3,
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: shipmentStream(),
+                  builder: (context, snapshot) {
+                    final data = snapshot.data ?? [];
+                    return buildStatusHistogramFromData(data);
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Table
+            // Table
             Expanded(
               child: Card(
                 elevation: 3,
@@ -348,33 +457,64 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    headingRowHeight: 48,
-                    dataRowHeight: 56,
-                    headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-                    dataTextStyle: const TextStyle(color: Colors.black87),
-                    dividerThickness: 0.6,
-                    columns: const [
-                      DataColumn(label: Text("Sender")),
-                      DataColumn(label: Text("Driver")),
-                      DataColumn(label: Text("Receiver")),
-                      DataColumn(label: Text("City")),
-                      DataColumn(label: Text("Price")),
-                      DataColumn(label: Text("Fee")),
-                      DataColumn(label: Text("Status")),
-                      DataColumn(label: Text("")),
-                      DataColumn(label: Text("Options")),
-                    ],
-                    rows: List.generate(shipments.length, (index) => _buildRow(index)),
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width - 32, // match padding of parent
+                    child: StreamBuilder<List<Map<String, dynamic>>>(
+                      stream: shipmentStream(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          return Center(child: Text('Error: ${snapshot.error}'));
+                        }
+
+                        allShipments = snapshot.data ?? [];
+                        shipments = allShipments.where((s) {
+                          final statusMatch = selectedStatus == null || selectedStatus!.isEmpty
+                              ? true
+                              : s['status'] == selectedStatus;
+                          final trackingMatch = trackingFilter.isEmpty
+                              ? true
+                              : s['trackingNumber']
+                              .toLowerCase()
+                              .contains(trackingFilter.toLowerCase());
+                          return statusMatch && trackingMatch;
+                        }).toList();
+
+                        return DataTable(
+                          headingRowHeight: 50,
+                          dataRowHeight: null,
+                          headingTextStyle: const TextStyle(
+                              fontWeight: FontWeight.bold, color: Colors.black),
+                          dataTextStyle: const TextStyle(color: Colors.black87),
+                          dividerThickness: 0.6,
+                          columns: const [
+                            DataColumn(label: Text("Sender")),
+                            DataColumn(label: Text("Driver")),
+                            DataColumn(label: Text("Receiver")),
+                            DataColumn(label: Text("City")),
+                            DataColumn(label: Text("Price")),
+                            DataColumn(label: Text("Fee")),
+                            DataColumn(label: Text("Status")),
+                            DataColumn(label: Text("")),
+                            DataColumn(label: Text("Options")),
+                          ],
+                          rows: List.generate(shipments.length, (index) => _buildRow(index)),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
-            )
+            ),
+
           ],
         ),
       ),
     );
   }
+
 
   Widget _buildSearchBox(String hint,
       {IconData? icon, double? width, Function(String)? onChanged}) {
