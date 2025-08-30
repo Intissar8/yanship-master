@@ -19,6 +19,8 @@ class ShipmentsTablePage extends StatefulWidget {
 class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
   List<Map<String, dynamic>> allShipments = [];
   List<Map<String, dynamic>> shipments = [];
+  int _currentIndex = -1; // 0 = Create Shipment, 1 = Shipment List, 2 = Customers, 3 = Drivers
+
 
 
   String? selectedStatus;
@@ -559,6 +561,128 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
     final data = doc.data() ?? {};
     return "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
   }
+  PreferredSizeWidget _buildAppBar(bool isMobile) {
+    return AppBar(
+      automaticallyImplyLeading: false,
+      backgroundColor: Colors.white,
+      elevation: 1,
+      titleSpacing: 16,
+      title: Row(
+        children: [
+          // Logo
+          Image.asset('assets/images/logo.png', height: 40),
+
+          if (!isMobile) ...[
+            const SizedBox(width: 24),
+            // Shipments Dropdown
+            PopupMenuButton<String>(
+              child: Row(
+                children: [
+                  Icon(Icons.local_shipping, color: Colors.grey[800], size: 22),
+                  const SizedBox(width: 6),
+                  Text('Shipments',
+                      style: TextStyle(
+                          color: Colors.grey[800],
+                          fontWeight: FontWeight.w500)),
+                  Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
+                ],
+              ),
+              onSelected: (value) {
+                if (value == 'Create Shipment') {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const ShipmentFormStyledPage()));
+                } else if (value == 'Shipment List') {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const ShipmentsTablePage()));
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                    value: 'Create Shipment',
+                    child: Row(children: [Icon(Icons.add), SizedBox(width: 8), Text('Create Shipment')])),
+                const PopupMenuItem(
+                    value: 'Shipment List',
+                    child: Row(children: [Icon(Icons.list), SizedBox(width: 8), Text('Shipment List')])),
+              ],
+            ),
+            const SizedBox(width: 24),
+            // Users Dropdown
+            PopupMenuButton<String>(
+              child: Row(
+                children: [
+                  Icon(Icons.person, color: Colors.grey[800], size: 22),
+                  const SizedBox(width: 6),
+                  Text('Users',
+                      style: TextStyle(
+                          color: Colors.grey[800],
+                          fontWeight: FontWeight.w500)),
+                  Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
+                ],
+              ),
+              onSelected: (value) {
+                if (value == 'Customer List') {
+                  // Navigate to customer list page
+                } else if (value == 'Driver List') {
+                  // Navigate to driver list page
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                    value: 'Customer List',
+                    child: Row(children: [Icon(Icons.people), SizedBox(width: 8), Text('Customer List')])),
+                const PopupMenuItem(
+                    value: 'Driver List',
+                    child: Row(children: [Icon(Icons.drive_eta), SizedBox(width: 8), Text('Driver List')])),
+              ],
+            ),
+          ],
+
+          // Spacer to push language + profile to the far right
+          const Spacer(),
+
+          // Language Dropdown
+          DropdownButton<String>(
+            value: 'English',
+            underline: const SizedBox(),
+            icon: const Icon(Icons.language, color: Colors.grey),
+            onChanged: (value) {},
+            items: const [
+              DropdownMenuItem(value: 'English', child: Text('English')),
+              DropdownMenuItem(value: 'French', child: Text('French')),
+              DropdownMenuItem(value: 'Arabic', child: Text('Arabic')),
+            ],
+          ),
+          const SizedBox(width: 12),
+
+          // Profile Circle
+          PopupMenuButton<String>(
+            offset: const Offset(0, 50),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onSelected: (value) {
+              if (value == 'profile') {
+                Navigator.pushReplacement(context,
+                    MaterialPageRoute(builder: (_) => const AdminProfileScreen()));
+              } else if (value == 'logout') {
+                Navigator.pushReplacement(context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()));
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'profile', child: Row(children: [Icon(Icons.person, color: Colors.blue), SizedBox(width: 8), Text('View Profile')])),
+              const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, color: Colors.red), SizedBox(width: 8), Text('Logout')])),
+            ],
+            child: const CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.blue,
+              child: Icon(Icons.person, color: Colors.white, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -566,209 +690,50 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        titleSpacing: 16,
-        title: Row(
-          children: [
-            // Logo
-            Image.asset('assets/images/logo.png', height: 40),
-            const SizedBox(width: 16),
-
-            if (!isMobile) ...[
-              // Shipments Dropdown (web only)
-              PopupMenuButton<String>(
-                child: Row(
-                  children: [
-                    Icon(Icons.local_shipping, color: Colors.grey[800], size: 22),
-                    const SizedBox(width: 6),
-                    Text('Shipments',
-                        style: TextStyle(
-                            color: Colors.grey[800],
-                            fontWeight: FontWeight.w500)),
-                    Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
-                  ],
-                ),
-                onSelected: (value) {
-                  if (value == 'Create Shipment') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const ShipmentFormStyledPage()),
-                    );
-                  } else if (value == 'Shipment List') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const ShipmentsTablePage()),
-                    );
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'Create Shipment',
-                    child: Row(
-                      children: [
-                        Icon(Icons.add),
-                        SizedBox(width: 8),
-                        Text('Create Shipment')
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'Shipment List',
-                    child: Row(
-                      children: [
-                        Icon(Icons.list),
-                        SizedBox(width: 8),
-                        Text('Shipment List')
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 24),
-
-              // Users Dropdown (web only)
-              PopupMenuButton<String>(
-                child: Row(
-                  children: [
-                    Icon(Icons.person, color: Colors.grey[800], size: 22),
-                    const SizedBox(width: 6),
-                    Text('Users',
-                        style: TextStyle(
-                            color: Colors.grey[800],
-                            fontWeight: FontWeight.w500)),
-                    Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
-                  ],
-                ),
-                onSelected: (value) {
-                  if (value == 'Customer List') {
-                    // TODO: Navigate to customer list
-                  } else if (value == 'Driver List') {
-                    // TODO: Navigate to driver list
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'Customer List',
-                    child: Row(
-                      children: [
-                        Icon(Icons.people),
-                        SizedBox(width: 8),
-                        Text('Customer List')
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'Driver List',
-                    child: Row(
-                      children: [
-                        Icon(Icons.drive_eta),
-                        SizedBox(width: 8),
-                        Text('Driver List')
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-            ],
-
-            // Language Dropdown
-            DropdownButton<String>(
-              value: 'English',
-              underline: const SizedBox(),
-              icon: const Icon(Icons.language, color: Colors.grey),
-              onChanged: (value) {
-                // handle language change
-              },
-              items: const [
-                DropdownMenuItem(value: 'English', child: Text('English')),
-                DropdownMenuItem(value: 'French', child: Text('French')),
-                DropdownMenuItem(value: 'Arabic', child: Text('Arabic')),
-              ],
-            ),
-
-            const SizedBox(width: 12),
-
-            // Profile Circle with menu
-            PopupMenuButton<String>(
-              offset: const Offset(0, 50),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              onSelected: (value) async {
-                if (value == 'profile') {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AdminProfileScreen()),
-                  );
-                } else if (value == 'logout') {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'profile',
-                  child: Row(
-                    children: [
-                      Icon(Icons.person, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('View Profile'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Logout'),
-                    ],
-                  ),
-                ),
-              ],
-              child: const CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.blue,
-                child: Icon(Icons.person, color: Colors.white, size: 20),
-              ),
-            ),
-          ],
-        ),
-      ),
+      appBar: _buildAppBar(isMobile),
 
       body: _buildBody(isMobile),
 
       // Bottom Navigation Bar only on mobile
       bottomNavigationBar: isMobile
           ? BottomNavigationBar(
-        selectedItemColor: Colors.blue,
+        type: BottomNavigationBarType.fixed,
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        selectedItemColor: Colors.grey,
         unselectedItemColor: Colors.grey,
+        currentIndex: _currentIndex < 0 ? 0 : _currentIndex,
         onTap: (index) {
-          if (index == 0) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const ShipmentFormStyledPage()),
-            );
-          } else if (index == 1) {
-            // Navigate to Users
+          setState(() {
+            _currentIndex = index;
+          });
+
+          switch (index) {
+            case 0:
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ShipmentFormStyledPage()));
+              break;
+            case 1:
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ShipmentsTablePage()));
+              break;
+            case 2:
+            // Customers
+              break;
+            case 3:
+            // Drivers
+              break;
           }
         },
         items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.local_shipping), label: "Shipments"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.people), label: "Users"),
+          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Create Shipment'),
+          BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Shipment List'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Customers'),
+          BottomNavigationBarItem(icon: Icon(Icons.drive_eta), label: 'Drivers'),
         ],
       )
           : null,
+
     );
   }
 
