@@ -20,6 +20,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
   List<Map<String, dynamic>> allShipments = [];
   List<Map<String, dynamic>> shipments = [];
 
+
   String? selectedStatus;
   String trackingFilter = "";
 
@@ -58,6 +59,217 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
     return counts;
   }
 
+// Normal cell for mobile card
+  Widget _buildCardCell(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 14),
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _buildShipmentCard(Map<String, dynamic> shipment, int index) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top row: Tracking number + Status
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Tracking: ${shipment["trackingNumber"] ?? "-"}",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                _buildCardCellChip(shipment["status"]),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Sender and Driver
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCardInfo("Sender", shipment["sender"]),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCardInfo("Driver", shipment["driver"]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            // Receiver and City
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCardInfo("Receiver", shipment["receiver"]),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCardInfo("City", shipment["city"]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            // Price and Fee
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCardInfo("Price", shipment["price"]),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCardInfo("Fee", shipment["fee"]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            // Bottom row: Selected Status + Action menu
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: _buildCardCellChip(shipment["selectedStatus"])),
+                _buildCardActionMenu(shipment, index),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+// Helper to show label + value vertically
+  Widget _buildCardInfo(String label, String? value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value ?? "-",
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+
+// Colored status chip
+  Widget _buildCardCellChip(String? status) {
+    if (status == null || status.isEmpty) return _buildCardCell("-");
+    return Container(
+      width: 120,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: (statusColors[status] ?? Colors.grey).withOpacity(0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          status,
+          style: TextStyle(
+            color: statusColors[status] ?? Colors.grey,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+// Action menu for mobile card (all web options)
+  Widget _buildCardActionMenu(Map<String, dynamic> shipment, int index) {
+    return Container(
+      width: 120,
+      alignment: Alignment.center,
+      child: PopupMenuButton<String>(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        icon: const Icon(Icons.more_vert, color: Colors.black),
+        itemBuilder: (context) {
+          List<PopupMenuEntry<String>> items = [
+            _menuItem("Delivered", Icons.check_circle, Colors.green),
+            _menuItem("Picked up", Icons.handshake, Colors.lightGreen),
+            _menuItem("No answer", Icons.call_missed, Colors.orange),
+            _menuItem("Reported", Icons.report, Colors.amber),
+            _menuItem("Rejected", Icons.block, Colors.redAccent),
+            _menuItem("Cancelled", Icons.cancel, Colors.red),
+            _menuItem("Created", Icons.add_circle_outline, Colors.blueGrey),
+            _menuItem("In Transit", Icons.local_shipping, Colors.lightBlue),
+            _menuItem("Confirm", Icons.check_circle, Colors.teal),
+            _menuItem("Distribution", Icons.apartment, Colors.deepPurple),
+            _menuItem("In Warehouse", Icons.warehouse, Colors.brown),
+            _menuItem("Pickup", Icons.store_mall_directory, Colors.indigo),
+            _menuItem("Retrieve", Icons.assignment_return, Colors.cyan),
+            _menuItem("Returned", Icons.keyboard_return, Colors.purple),
+            const PopupMenuDivider(),
+            _menuItem("Driver Paid", Icons.account_balance_wallet, Colors.tealAccent),
+            _menuItem("Customer Paid", Icons.payment, Colors.indigoAccent),
+            _menuItem("Driver Not Paid", Icons.warning, Colors.orangeAccent),
+            _menuItem("Customer Not Paid", Icons.error, Colors.redAccent),
+            const PopupMenuDivider(),
+            _menuItem("Edit Shipment", Icons.edit, Colors.black87),
+            _menuItem("Print Label", Icons.print, Colors.black87),
+            _menuItem("Send Mail", Icons.mail, Colors.black87),
+          ];
+
+          if (shipment["status"] == "Confirm") {
+            items.add(_menuItem("Assign Driver", Icons.drive_eta, Colors.teal));
+          }
+          return items;
+        },
+        onSelected: (value) async {
+          if (statusColors.containsKey(value)) {
+            setState(() {
+              shipments[index]["selectedStatus"] = value;
+            });
+            await FirebaseFirestore.instance
+                .collection('shipments')
+                .doc(shipment["id"])
+                .update({'secondAdminValue': value});
+          } else if (value == "Assign Driver") {
+            _showAssignDriverDialog(shipment["id"]);
+          } else if (value == "Edit Shipment") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AddShipmentScreen(
+                  shipmentId: shipment["id"],
+                  currentLang: 'en',
+                ),
+              ),
+            );
+          } else if (value == "Send Mail") {
+            _sendWhatsAppMessage(shipment["id"]);
+          } else if (value == "Print Label") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PrintLabelPage(shipment: shipment),
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
 
   Widget buildStatusHistogramFromData(List<Map<String, dynamic>> shipmentsData) {
     final counts = <String, int>{};
@@ -350,6 +562,8 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -358,88 +572,109 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
         titleSpacing: 16,
         title: Row(
           children: [
-            // Company logo
-            Image.asset(
-              'assets/images/logo.png',
-              height: 40,
-            ),
-            const SizedBox(width: 24),
+            // Logo
+            Image.asset('assets/images/logo.png', height: 40),
+            const SizedBox(width: 16),
 
-            // Shipments Dropdown
-            PopupMenuButton<String>(
-              child: Row(
-                children: [
-                  Icon(Icons.local_shipping, color: Colors.grey[800], size: 22),
-                  const SizedBox(width: 6),
-                  Text('Shipments', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w500)),
-                  Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
+            if (!isMobile) ...[
+              // Shipments Dropdown (web only)
+              PopupMenuButton<String>(
+                child: Row(
+                  children: [
+                    Icon(Icons.local_shipping, color: Colors.grey[800], size: 22),
+                    const SizedBox(width: 6),
+                    Text('Shipments',
+                        style: TextStyle(
+                            color: Colors.grey[800],
+                            fontWeight: FontWeight.w500)),
+                    Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
+                  ],
+                ),
+                onSelected: (value) {
+                  if (value == 'Create Shipment') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ShipmentFormStyledPage()),
+                    );
+                  } else if (value == 'Shipment List') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ShipmentsTablePage()),
+                    );
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'Create Shipment',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add),
+                        SizedBox(width: 8),
+                        Text('Create Shipment')
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'Shipment List',
+                    child: Row(
+                      children: [
+                        Icon(Icons.list),
+                        SizedBox(width: 8),
+                        Text('Shipment List')
+                      ],
+                    ),
+                  ),
                 ],
               ),
-              onSelected: (value) {
-                if (value == 'Create Shipment') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ShipmentFormStyledPage()),
-                  );
-                } else if (value == 'Shipment List') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ShipmentsTablePage()),
-                  );
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'Create Shipment',
-                  child: Row(
-                    children: [Icon(Icons.add), SizedBox(width: 8), Text('Create Shipment')],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'Shipment List',
-                  child: Row(
-                    children: [Icon(Icons.list), SizedBox(width: 8), Text('Shipment List')],
-                  ),
-                ),
-              ],
-            ),
+              const SizedBox(width: 24),
 
-            const SizedBox(width: 24),
-
-            // Users Dropdown
-            PopupMenuButton<String>(
-              child: Row(
-                children: [
-                  Icon(Icons.person, color: Colors.grey[800], size: 22),
-                  const SizedBox(width: 6),
-                  Text('Users', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w500)),
-                  Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
+              // Users Dropdown (web only)
+              PopupMenuButton<String>(
+                child: Row(
+                  children: [
+                    Icon(Icons.person, color: Colors.grey[800], size: 22),
+                    const SizedBox(width: 6),
+                    Text('Users',
+                        style: TextStyle(
+                            color: Colors.grey[800],
+                            fontWeight: FontWeight.w500)),
+                    Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
+                  ],
+                ),
+                onSelected: (value) {
+                  if (value == 'Customer List') {
+                    // TODO: Navigate to customer list
+                  } else if (value == 'Driver List') {
+                    // TODO: Navigate to driver list
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'Customer List',
+                    child: Row(
+                      children: [
+                        Icon(Icons.people),
+                        SizedBox(width: 8),
+                        Text('Customer List')
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'Driver List',
+                    child: Row(
+                      children: [
+                        Icon(Icons.drive_eta),
+                        SizedBox(width: 8),
+                        Text('Driver List')
+                      ],
+                    ),
+                  ),
                 ],
               ),
-              onSelected: (value) {
-                if (value == 'Customer List') {
-                  // Navigate to customer list page
-                } else if (value == 'Driver List') {
-                  // Navigate to driver list page
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'Customer List',
-                  child: Row(
-                    children: [Icon(Icons.people), SizedBox(width: 8), Text('Customer List')],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'Driver List',
-                  child: Row(
-                    children: [Icon(Icons.drive_eta), SizedBox(width: 8), Text('Driver List')],
-                  ),
-                ),
-              ],
-            ),
-
-            const Spacer(),
+              const Spacer(),
+            ],
 
             // Language Dropdown
             DropdownButton<String>(
@@ -447,7 +682,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
               underline: const SizedBox(),
               icon: const Icon(Icons.language, color: Colors.grey),
               onChanged: (value) {
-                // Handle language change
+                // handle language change
               },
               items: const [
                 DropdownMenuItem(value: 'English', child: Text('English')),
@@ -458,21 +693,18 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
 
             const SizedBox(width: 12),
 
-            // Profile Circle with View Profile + Logout
+            // Profile Circle with menu
             PopupMenuButton<String>(
               offset: const Offset(0, 50),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               onSelected: (value) async {
                 if (value == 'profile') {
-                  // Navigate to profile screen
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (_) => const AdminProfileScreen()),
                   );
-
-
                 } else if (value == 'logout') {
-                  // Sign out and go to LoginScreen
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -511,167 +743,264 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
         ),
       ),
 
+      body: _buildBody(isMobile),
 
+      // Bottom Navigation Bar only on mobile
+      bottomNavigationBar: isMobile
+          ? BottomNavigationBar(
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const ShipmentFormStyledPage()),
+            );
+          } else if (index == 1) {
+            // Navigate to Users
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.local_shipping), label: "Shipments"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.people), label: "Users"),
+        ],
+      )
+          : null,
+    );
+  }
 
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Filters & Add Button Card
-            Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 4,
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildSearchBox(
-                        "Search tracking",
-                        icon: Icons.search,
-                        onChanged: (val) {
+  Widget _buildBody(bool isMobile) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Filters
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 4,
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: isMobile
+                  ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildSearchBox("Search tracking",
+                      icon: Icons.search, onChanged: (val) {
+                        trackingFilter = val;
+                        applyFilters();
+                      }),
+                  const SizedBox(height: 16),
+                  _buildDropdown(
+                    hint: "-- Select shipping status --",
+                    items: {
+                      "All": Icons.list,
+                      "Created": Icons.add_circle_outline,
+                      "In Transit": Icons.local_shipping,
+                      "Cancelled": Icons.cancel,
+                      "Confirm": Icons.check_circle,
+                      "Distribution": Icons.apartment,
+                      "In Warehouse": Icons.warehouse,
+                      "No answer": Icons.call_missed,
+                      "Picked up": Icons.handshake,
+                      "Pickup": Icons.store_mall_directory,
+                      "Rejected": Icons.block,
+                      "Reported": Icons.report,
+                      "Retrieve": Icons.assignment_return,
+                      "Returned": Icons.keyboard_return,
+                    },
+                    onChanged: (val) {
+                      selectedStatus = val == "All" ? null : val;
+                      applyFilters();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.lightBlue[400],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                            const ShipmentFormStyledPage()),
+                      );
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text("Add Shipment",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              )
+                  : Row(
+                children: [
+                  Expanded(
+                    child: _buildSearchBox("Search tracking",
+                        icon: Icons.search, onChanged: (val) {
                           trackingFilter = val;
                           applyFilters();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildDropdown(
-                        hint: "-- Select shipping status --",
-                        items: {
-                          "All": Icons.list,
-                          "Created": Icons.add_circle_outline,
-                          "In Transit": Icons.local_shipping,
-                          "Cancelled": Icons.cancel,
-                          "Confirm": Icons.check_circle,
-                          "Distribution": Icons.apartment,
-                          "In Warehouse": Icons.warehouse,
-                          "No answer": Icons.call_missed,
-                          "Picked up": Icons.handshake,
-                          "Pickup": Icons.store_mall_directory,
-                          "Rejected": Icons.block,
-                          "Reported": Icons.report,
-                          "Retrieve": Icons.assignment_return,
-                          "Returned": Icons.keyboard_return,
-                        },
-                        onChanged: (val) {
-                          selectedStatus = val == "All" ? null : val;
-                          applyFilters();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlue[400],
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                        elevation: 3,
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const ShipmentFormStyledPage()),
-                        );
+                        }),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildDropdown(
+                      hint: "-- Select shipping status --",
+                      items: {
+                        "All": Icons.list,
+                        "Created": Icons.add_circle_outline,
+                        "In Transit": Icons.local_shipping,
+                        "Cancelled": Icons.cancel,
+                        "Confirm": Icons.check_circle,
+                        "Distribution": Icons.apartment,
+                        "In Warehouse": Icons.warehouse,
+                        "No answer": Icons.call_missed,
+                        "Picked up": Icons.handshake,
+                        "Pickup": Icons.store_mall_directory,
+                        "Rejected": Icons.block,
+                        "Reported": Icons.report,
+                        "Retrieve": Icons.assignment_return,
+                        "Returned": Icons.keyboard_return,
                       },
-                      icon: const Icon(Icons.add),
-                      label: const Text("Add Shipment", style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Histogram Card
-            Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 3,
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: shipmentStream(),
-                  builder: (context, snapshot) {
-                    final data = snapshot.data ?? [];
-                    return buildStatusHistogramFromData(data);
-                  },
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Table
-            // Table
-            Expanded(
-              child: Card(
-                elevation: 3,
-                color: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                    width: MediaQuery.of(context).size.width - 32, // match padding of parent
-                    child: StreamBuilder<List<Map<String, dynamic>>>(
-                      stream: shipmentStream(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        if (snapshot.hasError) {
-                          return Center(child: Text('Error: ${snapshot.error}'));
-                        }
-
-                        allShipments = snapshot.data ?? [];
-                        shipments = allShipments.where((s) {
-                          final statusMatch = selectedStatus == null || selectedStatus!.isEmpty
-                              ? true
-                              : s['status'] == selectedStatus;
-                          final trackingMatch = trackingFilter.isEmpty
-                              ? true
-                              : s['trackingNumber']
-                              .toLowerCase()
-                              .contains(trackingFilter.toLowerCase());
-                          return statusMatch && trackingMatch;
-                        }).toList();
-
-                        return DataTable(
-                          headingRowHeight: 50,
-                          dataRowHeight: null,
-                          headingTextStyle: const TextStyle(
-                              fontWeight: FontWeight.bold, color: Colors.black),
-                          dataTextStyle: const TextStyle(color: Colors.black87),
-                          dividerThickness: 0.6,
-                          columns: const [
-                            DataColumn(label: Text("Sender")),
-                            DataColumn(label: Text("Driver")),
-                            DataColumn(label: Text("Receiver")),
-                            DataColumn(label: Text("City")),
-                            DataColumn(label: Text("Price")),
-                            DataColumn(label: Text("Fee")),
-                            DataColumn(label: Text("Status")),
-                            DataColumn(label: Text("")),
-                            DataColumn(label: Text("Options")),
-                          ],
-                          rows: List.generate(shipments.length, (index) => _buildRow(index)),
-                        );
+                      onChanged: (val) {
+                        selectedStatus = val == "All" ? null : val;
+                        applyFilters();
                       },
                     ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.lightBlue[400],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                            const ShipmentFormStyledPage()),
+                      );
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text("Add Shipment",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ),
             ),
+          ),
 
-          ],
-        ),
+          const SizedBox(height: 20),
+
+          // Histogram
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 3,
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: shipmentStream(),
+                builder: (context, snapshot) {
+                  final data = snapshot.data ?? [];
+                  return buildStatusHistogramFromData(data);
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Table (web) or Cards (mobile)
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: shipmentStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                final data = snapshot.data ?? [];
+                allShipments = data;
+
+                shipments = allShipments.where((s) {
+                  final statusMatch =
+                  selectedStatus == null || selectedStatus!.isEmpty
+                      ? true
+                      : s['status'] == selectedStatus;
+                  final trackingMatch = trackingFilter.isEmpty
+                      ? true
+                      : s['trackingNumber']
+                      .toLowerCase()
+                      .contains(trackingFilter.toLowerCase());
+                  return statusMatch && trackingMatch;
+                }).toList();
+
+                if (isMobile) {
+                  return ListView.builder(
+                    itemCount: shipments.length,
+                    itemBuilder: (context, index) {
+                      final shipment = shipments[index];
+
+                      return _buildShipmentCard(shipments[index], index);
+                    },
+                  );
+
+                }
+                else {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width, // full screen width
+                      child: DataTable(
+                        headingRowHeight: 50,
+                        dataRowHeight: null,
+                        headingTextStyle: const TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.black),
+                        dataTextStyle: const TextStyle(color: Colors.black87),
+                        dividerThickness: 0.6,
+                        columns: const [
+                          DataColumn(label: Text("Sender")),
+                          DataColumn(label: Text("Driver")),
+                          DataColumn(label: Text("Receiver")),
+                          DataColumn(label: Text("City")),
+                          DataColumn(label: Text("Price")),
+                          DataColumn(label: Text("Fee")),
+                          DataColumn(label: Text("Status")),
+                          DataColumn(label: Text("")),
+                          DataColumn(label: Text("Options")),
+                        ],
+                        rows: List.generate(shipments.length, (index) => _buildRow(index)),
+                      ),
+                    ),
+                  );
+                }
+
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
+
+
 
 
   Widget _buildSearchBox(String hint,
