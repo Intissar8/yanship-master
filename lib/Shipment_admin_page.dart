@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'PrintLabelPage.dart';
 import 'add_shipment_screen.dart';
 import 'create_shipp_admin.dart';
 
@@ -220,6 +221,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
         "driver": driverName,
         "receiver": data['receiverName']?.toString() ?? "-",
         "city": data['city']?.toString() ?? "-",
+        "address": data['address']?.toString() ?? "-",
         "price": data['totalPrice']?.toString() ?? data['price']?.toString() ?? "-",
         "fee": fee.toString(),
         "status": data['deliveryStatus']?.toString() ?? "-",
@@ -536,7 +538,15 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
               );
             }else if (value == "Send Mail") {
               _sendWhatsAppMessage(shipment["id"]);
-            } else {
+            } else if (value == "Print Label") {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PrintLabelPage(shipment: shipment),
+                ),
+              );
+
+            }else {
               ScaffoldMessenger.of(context)
                   .showSnackBar(SnackBar(content: Text("Action: $value")));
             }

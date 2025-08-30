@@ -71,7 +71,7 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: ShipmentFormStyledPage(),
+      home: ShipmentsTablePage(),
     );
   }
 }
