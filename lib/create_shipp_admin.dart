@@ -451,33 +451,56 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       showDialog(
         context: context,
         builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+          backgroundColor: Colors.white, // soft modern background
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle_outline, color: Colors.green, size: 60),
-                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.green.shade100, // soft background for the icon
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: const Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green,
+                    size: 64,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 const Text(
                   "Shipment updated successfully!",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold,color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade600,
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    backgroundColor: Colors.green.shade500,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 4,
+                    shadowColor: Colors.green.shade300,
                   ),
-                  child: const Text("OK",style: TextStyle(color: Colors.white),),
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  ),
                 ),
               ],
             ),
           ),
-        ),
+        )
+
       );
     } catch (e) {
       showDialog(
@@ -758,15 +781,24 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
               const SizedBox(height: 16),
               Center(
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.add_circle_outline),
-                  label: const Text("Create New Shipment"),
+                  icon: const Icon(Icons.add_circle_outline, size: 24),
+                  label: const Text(
+                    "Create New Shipment",
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade600,
+                    backgroundColor: Colors.green.shade500, // softer, modern green
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12), // more modern rounded corners
+                    ),
+                    elevation: 4, // subtle shadow
+                    shadowColor: Colors.green.shade300,
                   ),
                   onPressed: _saveShipment,
-                ),
+                )
+
               ),
             ],
           ),
@@ -842,34 +874,43 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 5),
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      color: Colors.white, // main card background
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.grey.shade800,
+              color: Colors.grey.shade200, // light grey header
               borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
             ),
             child: Row(
               children: [
-                Icon(icon, color: Colors.greenAccent),
-                const SizedBox(width: 6),
-                Text(title,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                Icon(icon, color: Colors.blue.shade700),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.grey.shade800,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
               ],
             ),
           ),
+          // Body
           Padding(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(8),
             child: Column(children: children),
           ),
         ],
       ),
     );
   }
+
 
   Widget _textField(String label, TextEditingController controller,
       {bool isNumber = false, bool readOnly = false, bool small = false, int flex = 1}) {
@@ -878,15 +919,30 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       child: TextFormField(
         controller: controller,
         readOnly: readOnly,
-        style: const TextStyle(overflow: TextOverflow.ellipsis),
+        style: TextStyle(
+          color: readOnly ? Colors.grey.shade700 : Colors.grey.shade900,
+          overflow: TextOverflow.ellipsis,
+        ),
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         decoration: InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
           labelText: label,
-          border: const OutlineInputBorder(),
+          labelStyle: TextStyle(color: Colors.grey.shade800),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.blue.shade700, width: 1.5),
+          ),
           filled: true,
-          fillColor: readOnly ? Colors.grey.shade200 : Colors.grey.shade100,
+          fillColor: readOnly ? Colors.grey.shade200 : Colors.grey.shade50,
         ),
         validator: (val) => val == null || val.isEmpty ? "Enter $label" : null,
         onChanged: (_) => _calculateTotals(),
@@ -894,19 +950,39 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
     );
   }
 
-  Widget _safeDropdown({required String label, required List<String> items, String? value, bool small = false, Function(String?)? onChanged}) {
+
+  Widget _safeDropdown({
+    required String label,
+    required List<String> items,
+    String? value,
+    bool small = false,
+    Function(String?)? onChanged,
+  }) {
     final filteredItems = items.where((e) => e.isNotEmpty).toSet().toList();
     final safeValue = (value != null && filteredItems.contains(value)) ? value : null;
+
     return SizedBox(
       height: small ? 40 : 50,
       child: DropdownButtonFormField<String>(
         value: safeValue,
         decoration: InputDecoration(
-          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
           labelText: label,
-          border: const OutlineInputBorder(),
+          labelStyle: TextStyle(color: Colors.grey.shade800),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.blue.shade700, width: 1.5),
+          ),
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: Colors.grey.shade50,
         ),
         items: filteredItems
             .map((e) => DropdownMenuItem(
@@ -928,17 +1004,33 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
     final safeValue = (selectedTracking != null && filteredItems.contains(selectedTracking))
         ? selectedTracking
         : null;
+
     return SizedBox(
       height: 50,
       child: DropdownButtonFormField<String>(
         value: safeValue,
         decoration: InputDecoration(
+          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
           labelText: label,
-          border: const OutlineInputBorder(),
+          labelStyle: TextStyle(color: Colors.grey.shade800),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.blue.shade700, width: 1.5),
+          ),
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: Colors.grey.shade50,
         ),
-        items: filteredItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+        items: filteredItems
+            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+            .toList(),
         onChanged: (val) {
           if (val != null) _onSelectShipment(val);
         },
@@ -946,4 +1038,5 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
       ),
     );
   }
+
 }
