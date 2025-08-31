@@ -78,6 +78,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
       margin: const EdgeInsets.symmetric(vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 3,
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -935,8 +936,9 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                 else {
                   return SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width, // full screen width
+                    child: Container(
+                      color: Colors.white, // ✅ force table background white
+                      width: MediaQuery.of(context).size.width,
                       child: DataTable(
                         headingRowHeight: 50,
                         dataRowHeight: null,
@@ -959,6 +961,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                       ),
                     ),
                   );
+
                 }
 
               },
@@ -1026,83 +1029,97 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
 
   DataRow _buildRow(int index) {
     final shipment = shipments[index];
-    return DataRow(cells: [
-      DataCell(Text(shipment["sender"] ?? "-")),
-      DataCell(Text(shipment["driver"] ?? "-")),
-      DataCell(Text(shipment["receiver"] ?? "-")),
-      DataCell(Text(shipment["city"] ?? "-")),
-      DataCell(Text(shipment["price"]?.toString() ?? "-")),
-      DataCell(Text(shipment["fee"]?.toString() ?? "-")),
-      DataCell(Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: (statusColors[shipment["status"]] ?? Colors.grey).withOpacity(0.15),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          shipment["status"] ?? "-",
-          style: TextStyle(
-            color: statusColors[shipment["status"]] ?? Colors.grey,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-        ),
-      )),
-      DataCell(shipment["selectedStatus"] == null || shipment["selectedStatus"] == ""
-          ? const SizedBox()
-          : Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: (statusColors[shipment["selectedStatus"]] ?? Colors.grey).withOpacity(0.15),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          shipment["selectedStatus"],
-          style: TextStyle(
-            color: statusColors[shipment["selectedStatus"]] ?? Colors.grey,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-        ),
-      )),
-      DataCell(
-        PopupMenuButton<String>(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          icon: const Icon(Icons.more_vert, color: Colors.black),
-          itemBuilder: (context) {
-            List<PopupMenuEntry<String>> items = [
-              _menuItem("Delivered", Icons.check_circle, Colors.green),
-              _menuItem("Picked up", Icons.handshake, Colors.lightGreen),
-              _menuItem("No answer", Icons.call_missed, Colors.orange),
-              _menuItem("Reported", Icons.report, Colors.amber),
-              _menuItem("Rejected", Icons.block, Colors.redAccent),
-              _menuItem("Cancelled", Icons.cancel, Colors.red),
-              _menuItem("Created", Icons.add_circle_outline, Colors.blueGrey),
-              _menuItem("In Transit", Icons.local_shipping, Colors.lightBlue),
-              _menuItem("Confirm", Icons.check_circle, Colors.teal),
-              _menuItem("Distribution", Icons.apartment, Colors.deepPurple),
-              _menuItem("In Warehouse", Icons.warehouse, Colors.brown),
-              _menuItem("Pickup", Icons.store_mall_directory, Colors.indigo),
-              _menuItem("Retrieve", Icons.assignment_return, Colors.cyan),
-              _menuItem("Returned", Icons.keyboard_return, Colors.purple),
-              const PopupMenuDivider(),
-              _menuItem("Driver Paid", Icons.account_balance_wallet, Colors.tealAccent),
-              _menuItem("Customer Paid", Icons.payment, Colors.indigoAccent),
-              _menuItem("Driver Not Paid", Icons.warning, Colors.orangeAccent),
-              _menuItem("Customer Not Paid", Icons.error, Colors.redAccent),
-              const PopupMenuDivider(),
-              _menuItem("Edit Shipment", Icons.edit, Colors.black87),
-              _menuItem("Print Label", Icons.print, Colors.black87),
-              _menuItem("Send Mail", Icons.mail, Colors.black87),
-            ];
 
-            // Only show "Assign Driver" if status is "Confirm"
-            if (shipment["status"] == "Confirm") {
-              items.add(_menuItem("Assign Driver", Icons.drive_eta, Colors.teal));
-            }
+    final bool isEven = index % 2 == 0;
+    final Color rowColor = isEven ? Colors.white : Colors.white54; // Alternating colors
 
-            return items;
+    return DataRow(
+        color: MaterialStateProperty.resolveWith<Color?>(
+              (Set<MaterialState> states) {
+            return rowColor; // Row background color
           },
+        ),
+        cells: [
+          DataCell(Text(shipment["sender"] ?? "-")),
+          DataCell(Text(shipment["driver"] ?? "-")),
+          DataCell(Text(shipment["receiver"] ?? "-")),
+          DataCell(Text(shipment["city"] ?? "-")),
+          DataCell(Text(shipment["price"]?.toString() ?? "-")),
+          DataCell(Text(shipment["fee"]?.toString() ?? "-")),
+          DataCell(
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: (statusColors[shipment["status"]] ?? Colors.grey).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12), // Rounded edges
+              ),
+              child: Text(
+                shipment["status"] ?? "-",
+                style: TextStyle(
+                  color: statusColors[shipment["status"]] ?? Colors.grey,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          DataCell(
+            shipment["selectedStatus"] == null || shipment["selectedStatus"] == ""
+                ? const SizedBox()
+                : Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: (statusColors[shipment["selectedStatus"]] ?? Colors.grey)
+                    .withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12), // Rounded edges
+              ),
+              child: Text(
+                shipment["selectedStatus"],
+                style: TextStyle(
+                  color: statusColors[shipment["selectedStatus"]] ?? Colors.grey,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          DataCell(
+            PopupMenuButton<String>(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              icon: const Icon(Icons.more_vert, color: Colors.black),
+              itemBuilder: (context) {
+                // same menu items as before
+                List<PopupMenuEntry<String>> items = [
+                  _menuItem("Delivered", Icons.check_circle, Colors.green),
+                  _menuItem("Picked up", Icons.handshake, Colors.lightGreen),
+                  _menuItem("No answer", Icons.call_missed, Colors.orange),
+                  _menuItem("Reported", Icons.report, Colors.amber),
+                  _menuItem("Rejected", Icons.block, Colors.redAccent),
+                  _menuItem("Cancelled", Icons.cancel, Colors.red),
+                  _menuItem("Created", Icons.add_circle_outline, Colors.blueGrey),
+                  _menuItem("In Transit", Icons.local_shipping, Colors.lightBlue),
+                  _menuItem("Confirm", Icons.check_circle, Colors.teal),
+                  _menuItem("Distribution", Icons.apartment, Colors.deepPurple),
+                  _menuItem("In Warehouse", Icons.warehouse, Colors.brown),
+                  _menuItem("Pickup", Icons.store_mall_directory, Colors.indigo),
+                  _menuItem("Retrieve", Icons.assignment_return, Colors.cyan),
+                  _menuItem("Returned", Icons.keyboard_return, Colors.purple),
+                  const PopupMenuDivider(),
+                  _menuItem("Driver Paid", Icons.account_balance_wallet, Colors.tealAccent),
+                  _menuItem("Customer Paid", Icons.payment, Colors.indigoAccent),
+                  _menuItem("Driver Not Paid", Icons.warning, Colors.orangeAccent),
+                  _menuItem("Customer Not Paid", Icons.error, Colors.redAccent),
+                  const PopupMenuDivider(),
+                  _menuItem("Edit Shipment", Icons.edit, Colors.black87),
+                  _menuItem("Print Label", Icons.print, Colors.black87),
+                  _menuItem("Send Mail", Icons.mail, Colors.black87),
+                ];
+
+                if (shipment["status"] == "Confirm") {
+                  items.add(_menuItem("Assign Driver", Icons.drive_eta, Colors.teal));
+                }
+                return items;
+              },
           onSelected: (value) async {
             if (statusColors.containsKey(value)) {
               setState(() {
