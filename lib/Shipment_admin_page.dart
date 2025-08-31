@@ -367,15 +367,11 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
         return;
       }
 
-      // --- FIX: format phone number ---
+      // --- Format phone number ---
       String phone = driver['phone'].toString().trim();
-
-      // if phone starts with 0, replace with country code (example: Morocco +212)
       if (phone.startsWith("0")) {
-        phone = "+212${phone.substring(1)}";
+        phone = "+212${phone.substring(1)}"; // example Morocco
       }
-
-      // make sure it starts with + (international format)
       if (!phone.startsWith("+")) {
         phone = "+$phone";
       }
@@ -387,17 +383,24 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
       final message =
           "Hello ${driver['firstName'] ?? ''},\n\n"
           "A new shipment has been assigned to you.\n\n"
-          " Tracking: $tracking\n"
-          " Address: $address, $city\n\n"
+          "Tracking: $tracking\n"
+          "Address: $address, $city\n\n"
           "Please proceed with the delivery.";
 
-      final url =
-          "https://wa.me/${phone.replaceAll("+", "")}?text=${Uri.encodeComponent(message)}";
+      // --- Prefer native WhatsApp scheme on mobile ---
+      final whatsappUrl = Uri.parse(
+        "whatsapp://send?phone=${phone.replaceAll("+", "")}&text=${Uri.encodeComponent(message)}",
+      );
 
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        throw "Could not open WhatsApp";
+      // fallback web URL
+      final webUrl = Uri.parse(
+        "https://wa.me/${phone.replaceAll("+", "")}?text=${Uri.encodeComponent(message)}",
+      );
+
+      if (!await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication)) {
+        if (!await launchUrl(webUrl, mode: LaunchMode.externalApplication)) {
+          throw "Could not open WhatsApp";
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -405,6 +408,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
       );
     }
   }
+
 
 
 
