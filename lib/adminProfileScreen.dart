@@ -224,10 +224,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               const PopupMenuItem(value: 'profile', child: Row(children: [Icon(Icons.person, color: Colors.blue), SizedBox(width: 8), Text('View Profile')])),
               const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, color: Colors.red), SizedBox(width: 8), Text('Logout')])),
             ],
-            child: const CircleAvatar(
+            child:  CircleAvatar(
               radius: 18,
               backgroundColor: Colors.blue,
-              child: Icon(Icons.person, color: Colors.white, size: 20),
+              backgroundImage: avatarBytes != null ? MemoryImage(avatarBytes!) : null,
+              child: avatarBytes == null
+                  ? const Icon(Icons.person, color: Colors.white, size: 20)
+                  : null,
             ),
           ),
         ],

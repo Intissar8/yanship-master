@@ -1,6 +1,13 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'Shipment_admin_page.dart';
+import 'adminProfileScreen.dart';
+import 'login_screen.dart';
 
 class ShipmentFormStyledPage extends StatefulWidget {
   const ShipmentFormStyledPage({super.key});
@@ -22,7 +29,7 @@ class Package {
 
 class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
   final _formKey = GlobalKey<FormState>();
-
+  int _currentIndex = 0; // 0 = Create Shipment, 1 = Shipment List, 2 = Customers, 3 = Drivers
   final totalValue = TextEditingController();
   final totalPrice = TextEditingController();
   final Map<String, TextEditingController> controllers = {};
@@ -30,7 +37,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
   List<Package> packages = [];
   List<XFile> attachedFiles = [];// new uploads
   List<String> savedFileNames = [];// from Firestore
-
+  Map<String, dynamic>? adminData;
 
   List<String> trackingNumbers = [];
   String? selectedTracking;
@@ -41,6 +48,143 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
   String? selectedDriver;
   String? selectedShipmentDocId;
 
+  Widget _buildProfileAvatar(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      try {
+        // Decode base64 string into bytes
+        Uint8List bytes = base64Decode(avatarUrl);
+        return CircleAvatar(
+          radius: 18,
+          backgroundImage: MemoryImage(bytes),
+        );
+      } catch (e) {
+        // Fallback if decoding fails
+        return const CircleAvatar(
+          radius: 18,
+          backgroundColor: Colors.blue,
+          child: Icon(Icons.person, color: Colors.white, size: 20),
+        );
+      }
+    } else {
+      // Default avatar
+      return const CircleAvatar(
+        radius: 18,
+        backgroundColor: Colors.blue,
+        child: Icon(Icons.person, color: Colors.white, size: 20),
+      );
+    }
+  }
+
+
+  PreferredSizeWidget _buildAppBar(bool isMobile) {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 1,
+      titleSpacing: 16,
+      title: Row(
+        children: [
+          Image.asset('assets/images/logo.png', height: 40),
+          if (!isMobile) ...[
+            const SizedBox(width: 24),
+            // Shipments Dropdown
+            PopupMenuButton<String>(
+              child: Row(
+                children: [
+                  Icon(Icons.local_shipping, color: Colors.grey[800], size: 22),
+                  const SizedBox(width: 6),
+                  Text('Shipments', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w500)),
+                  Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
+                ],
+              ),
+              onSelected: (value) {
+                if (value == 'Create Shipment') {
+                  // Already on this page
+                } else if (value == 'Shipment List') {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ShipmentsTablePage()));
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'Create Shipment', child: Row(children: [Icon(Icons.add), SizedBox(width: 8), Text('Create Shipment')])) ,
+                const PopupMenuItem(value: 'Shipment List', child: Row(children: [Icon(Icons.list), SizedBox(width: 8), Text('Shipment List')])) ,
+              ],
+            ),
+            const SizedBox(width: 16),
+            PopupMenuButton<String>(
+              child: Row(
+                children: [
+                  Icon(Icons.person, color: Colors.grey[800], size: 22),
+                  const SizedBox(width: 6),
+                  Text('Users', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w500)),
+                  Icon(Icons.arrow_drop_down, color: Colors.grey[800], size: 22),
+                ],
+              ),
+              onSelected: (value) {
+                if (value == 'Customer List') {
+                  // Navigate to Customers List page
+                } else if (value == 'Driver List') {
+                  // Navigate to Drivers List page
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                    value: 'Customer List',
+                    child: Row(children: [Icon(Icons.people), SizedBox(width: 8), Text('Customer List')])
+                ),
+                const PopupMenuItem(
+                    value: 'Driver List',
+                    child: Row(children: [Icon(Icons.drive_eta), SizedBox(width: 8), Text('Driver List')])
+                ),
+              ],
+            ),
+
+          ],
+          const Spacer(),
+          // Language dropdown
+          DropdownButton<String>(
+            value: 'English',
+            underline: const SizedBox(),
+            icon: const Icon(Icons.language, color: Colors.grey),
+            onChanged: (value) {},
+            items: const [
+              DropdownMenuItem(value: 'English', child: Text('English')),
+              DropdownMenuItem(value: 'French', child: Text('French')),
+              DropdownMenuItem(value: 'Arabic', child: Text('Arabic')),
+            ],
+          ),
+          const SizedBox(width: 12),
+          // Profile Circle (can navigate to admin)
+          PopupMenuButton<String>(
+            offset: const Offset(0, 50),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onSelected: (value) {
+              if (value == 'profile') {
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminProfileScreen()));
+              } else if (value == 'logout') {
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'profile', child: Row(children: [Icon(Icons.person, color: Colors.blue), SizedBox(width: 8), Text('View Profile')])),
+              const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, color: Colors.red), SizedBox(width: 8), Text('Logout')])),
+            ],
+            child: _buildProfileAvatar(adminData?['avatarUrl']),
+          ),
+        ],
+      ),
+    );
+  }
+  Future<void> _loadAdminData() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('admin')
+        .doc('lQwnBDMD1rKNUiwz29Oa') // <-- replace with your admin doc ID
+        .get();
+    if (snapshot.exists) {
+      setState(() {
+        adminData = snapshot.data();
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +192,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
     _addPackage(); // default package if no packages exist yet
     _loadTrackingNumbers();
     _loadDrivers();
+    _loadAdminData();
   }
 
   void _initControllers() {
@@ -316,7 +461,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                 const SizedBox(height: 12),
                 const Text(
                   "Shipment updated successfully!",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold,color: Colors.white),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -327,7 +472,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text("OK"),
+                  child: const Text("OK",style: TextStyle(color: Colors.white),),
                 ),
               ],
             ),
@@ -356,10 +501,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
     final isMobile = screenWidth < 600;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Add New Shipment"),
-        backgroundColor: Colors.blue.shade700,
-      ),
+      appBar: _buildAppBar(isMobile),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(12),
         child: Form(
@@ -629,7 +771,40 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
             ],
           ),
         ),
-      ),
+      ),bottomNavigationBar: isMobile
+        ? BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
+      selectedFontSize: 12,
+      unselectedFontSize: 12,
+      selectedItemColor: Colors.grey,
+      unselectedItemColor: Colors.grey,
+      currentIndex: _currentIndex,
+      onTap: (index) {
+        setState(() => _currentIndex = index);
+
+        switch (index) {
+          case 0:
+          // Already on this page
+            break;
+          case 1:
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ShipmentsTablePage()));
+            break;
+          case 2:
+          // Customer List
+            break;
+          case 3:
+          // Driver List
+            break;
+        }
+      },
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Create Shipment'),
+        BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Shipment List'),
+        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Customers'),
+        BottomNavigationBarItem(icon: Icon(Icons.drive_eta), label: 'Drivers'),
+      ],
+    )
+        : null,
     );
   }
 

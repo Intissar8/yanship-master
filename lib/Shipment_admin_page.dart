@@ -6,7 +6,8 @@ import 'add_shipment_screen.dart';
 import 'adminProfileScreen.dart';
 import 'create_shipp_admin.dart';
 import 'package:fl_chart/fl_chart.dart';
-
+import 'dart:convert';
+import 'dart:typed_data';
 import 'login_screen.dart';
 
 class ShipmentsTablePage extends StatefulWidget {
@@ -20,7 +21,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
   List<Map<String, dynamic>> allShipments = [];
   List<Map<String, dynamic>> shipments = [];
   int _currentIndex = -1; // 0 = Create Shipment, 1 = Shipment List, 2 = Customers, 3 = Drivers
-
+  Map<String, dynamic>? adminData;
 
 
   String? selectedStatus;
@@ -45,12 +46,50 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
     "Customer Paid": Colors.indigoAccent,
     "Driver Not Paid": Colors.orangeAccent,
     "Customer Not Paid": Colors.redAccent,
-  };
 
+  };
+  Widget _buildProfileAvatar(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      try {
+        // Decode base64 string into bytes
+        Uint8List bytes = base64Decode(avatarUrl);
+        return CircleAvatar(
+          radius: 18,
+          backgroundImage: MemoryImage(bytes),
+        );
+      } catch (e) {
+        // Fallback if decoding fails
+        return const CircleAvatar(
+          radius: 18,
+          backgroundColor: Colors.blue,
+          child: Icon(Icons.person, color: Colors.white, size: 20),
+        );
+      }
+    } else {
+      // Default avatar
+      return const CircleAvatar(
+        radius: 18,
+        backgroundColor: Colors.blue,
+        child: Icon(Icons.person, color: Colors.white, size: 20),
+      );
+    }
+  }
+
+  Future<void> _loadAdminData() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('admin')
+        .doc('lQwnBDMD1rKNUiwz29Oa') // <-- replace with your admin doc ID
+        .get();
+    if (snapshot.exists) {
+      setState(() {
+        adminData = snapshot.data();
+      });
+    }
+  }
   @override
   void initState() {
     super.initState();
-
+    _loadAdminData();
   }
   Map<String, int> getShipmentStatusCounts() {
     final Map<String, int> counts = {};
@@ -472,8 +511,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                       .doc(shipmentId)
                       .update({'driverId': selectedDriverId});
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Driver assigned successfully")));
+
 
                   Navigator.pop(context);
 
@@ -676,11 +714,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
               const PopupMenuItem(value: 'profile', child: Row(children: [Icon(Icons.person, color: Colors.blue), SizedBox(width: 8), Text('View Profile')])),
               const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, color: Colors.red), SizedBox(width: 8), Text('Logout')])),
             ],
-            child: const CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.blue,
-              child: Icon(Icons.person, color: Colors.white, size: 20),
-            ),
+            child: _buildProfileAvatar(adminData?['avatarUrl']),
           ),
         ],
       ),
