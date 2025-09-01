@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'Customer Management.dart';
+import 'Driver Management.dart';
 import 'Shipment_admin_page.dart';
 import 'adminProfileScreen.dart';
 import 'login_screen.dart';
@@ -78,6 +80,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
 
   PreferredSizeWidget _buildAppBar(bool isMobile) {
     return AppBar(
+      automaticallyImplyLeading: false,
       backgroundColor: Colors.white,
       elevation: 1,
       titleSpacing: 16,
@@ -120,9 +123,11 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
               ),
               onSelected: (value) {
                 if (value == 'Customer List') {
-                  // Navigate to Customers List page
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const CustomerManagementPage()));
                 } else if (value == 'Driver List') {
-                  // Navigate to Drivers List page
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const DriverManagementPage()));
                 }
               },
               itemBuilder: (context) => [
@@ -524,6 +529,7 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
     final isMobile = screenWidth < 600;
 
     return Scaffold(
+        backgroundColor: Colors.grey[100],
       appBar: _buildAppBar(isMobile),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(12),
@@ -822,10 +828,12 @@ class _ShipmentFormStyledPageState extends State<ShipmentFormStyledPage> {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const ShipmentsTablePage()));
             break;
           case 2:
-          // Customer List
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const CustomerManagementPage()));
             break;
           case 3:
-          // Driver List
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const DriverManagementPage()));
             break;
         }
       },

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:yanship/register_client_screen.dart';
 import 'package:yanship/register_driver_screen.dart';
+import 'CustomerProfileScreen.dart';
 import 'Shipment_admin_page.dart';
 import 'add_shipment_screen.dart';
 import 'dashboardC.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,28 +45,33 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Static admin login
-      if (email == 'admin@gmail.com' && password == '123456789') {
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (!mounted) return;
+      // Sign in with Firebase Auth
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+
+      final uid = userCredential.user!.uid;
+
+      // Get user role
+      final userDoc = await FirebaseFirestore.instance
+          .collection('clients')
+          .doc(uid)
+          .get();
+
+      final role = userDoc.data()?['role'] ?? 'user';
+
+      if (!mounted) return;
+
+      if (role == 'admin') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const ShipmentsTablePage()),
         );
-        return;
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ShipmentsListStyled()),
+        );
       }
-
-      // Firebase login
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const ShipmentsListStyled()),
-      );
     } on FirebaseAuthException catch (e) {
       String message = switch (e.code) {
         'user-not-found' => 'No user found for that email.',
@@ -77,6 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
 
   void _showError(String message) {
     showDialog(

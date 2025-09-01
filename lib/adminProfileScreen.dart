@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'Customer Management.dart';
+import 'Driver Management.dart';
 import 'Shipment_admin_page.dart';
 import 'create_shipp_admin.dart';
 import 'login_screen.dart';
@@ -184,7 +186,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 ],
               ),
               onSelected: (value) {
-                // Handle navigation for Customers & Drivers
+                if (value == 'Customer List') {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const CustomerManagementPage()));
+                } else if (value == 'Driver List') {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const DriverManagementPage()));
+                }
               },
               itemBuilder: (context) => [
                 const PopupMenuItem(value: 'Customer List', child: Row(children: [Icon(Icons.people), SizedBox(width: 8), Text('Customer List')])),
@@ -298,10 +306,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const ShipmentsTablePage()));
               break;
             case 2:
-            // Customer List
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const CustomerManagementPage()));
               break;
             case 3:
-            // Driver List
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const DriverManagementPage()));
               break;
           }
         },

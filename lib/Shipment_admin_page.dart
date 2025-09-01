@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'Customer Management.dart';
+import 'Driver Management.dart';
 import 'PrintLabelPage.dart';
 import 'add_shipment_screen.dart';
 import 'adminProfileScreen.dart';
@@ -664,9 +666,11 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
               ),
               onSelected: (value) {
                 if (value == 'Customer List') {
-                  // Navigate to customer list page
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const CustomerManagementPage()));
                 } else if (value == 'Driver List') {
-                  // Navigate to driver list page
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const DriverManagementPage()));
                 }
               },
               itemBuilder: (context) => [
@@ -757,10 +761,12 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                   MaterialPageRoute(builder: (_) => const ShipmentsTablePage()));
               break;
             case 2:
-            // Customers
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const CustomerManagementPage()));
               break;
             case 3:
-            // Drivers
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const DriverManagementPage()));
               break;
           }
         },
