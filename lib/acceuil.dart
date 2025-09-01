@@ -537,6 +537,26 @@ class FeaturesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
+    final features = const [
+      FeatureCard(
+        icon: Icons.settings,
+        title: "We offer all in one pack",
+        description:
+        "No need to distracting between a lot of services we give you a complete pack. Just scale it.!",
+      ),
+      FeatureCard(
+        icon: Icons.local_shipping,
+        title: "Fast shipping",
+        description:
+        "Our delivery time to all morocco with an average time of 24H. Yalla.!",
+      ),
+      FeatureCard(
+        icon: Icons.attach_money,
+        title: "24H payment",
+        description:
+        "We send payments daily so there is no late cash flow. Money ringtone.!",
+      ),
+    ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 60.0, vertical: 50),
@@ -555,37 +575,24 @@ class FeaturesSection extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
-          Wrap(
+          isMobile
+              ? SizedBox(
+            height: 300, // adjust height as needed
+            child: PageView(
+              children: features,
+            ),
+          )
+              : Wrap(
             spacing: 40,
             runSpacing: 40,
             alignment: WrapAlignment.center,
-            children: const [
-              FeatureCard(
-                icon: Icons.settings,
-                title: "We offer all in one pack",
-                description:
-                "No need to distracting between a lot of services we give you a complete pack. Just scale it.!",
-              ),
-              FeatureCard(
-                icon: Icons.local_shipping,
-                title: "Fast shipping",
-                description:
-                "Our delivery time to all morocco with an average time of 24H. Yalla.!",
-              ),
-              FeatureCard(
-                icon: Icons.attach_money,
-                title: "24H payment",
-                description:
-                "We send payments daily so there is no late cash flow. Money ringtone.!",
-              ),
-            ],
+            children: features,
           ),
         ],
       ),
     );
   }
 }
-
 class FeatureCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -637,6 +644,28 @@ class VipPlansSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
+
+    final plans = const [
+      VipPlanCard(
+        title: "Silver",
+        price: "10",
+        orders: "50 ORDERS DELIVERED OR LESS / PER MONTH",
+        imageAsset: 'assets/images/silver.png',
+      ),
+      VipPlanCard(
+        title: "Gold",
+        price: "9",
+        orders: "+50 ORDERS / PER MONTH",
+        imageAsset: 'assets/images/gold.png',
+      ),
+      VipPlanCard(
+        title: "Platinum",
+        price: "7",
+        orders: "+100 ORDERS / PER MONTH",
+        imageAsset: 'assets/images/platinum.png',
+      ),
+    ];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 60.0, vertical: 50),
       child: Column(
@@ -668,38 +697,38 @@ class VipPlansSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 40),
-          Center(
+          isMobile
+              ? SizedBox(
+            height: 500, // enough to fit the tallest card
+            child: PageView.builder(
+              itemCount: plans.length,
+              controller: PageController(viewportFraction: 0.85),
+              itemBuilder: (context, index) {
+                return SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: plans[index],
+                  ),
+                );
+              },
+            ),
+          )
+              : Center(
             child: Wrap(
               spacing: 30,
               runSpacing: 30,
               alignment: WrapAlignment.center,
-              children: const [
-                VipPlanCard(
-                  title: "Silver",
-                  price: "10",
-                  orders: "50 ORDERS DELIVERED OR LESS / PER MONTH",
-                  imageAsset: 'assets/images/silver.png',
-                ),
-                VipPlanCard(
-                  title: "Gold",
-                  price: "9",
-                  orders: "+50 ORDERS / PER MONTH",
-                  imageAsset: 'assets/images/gold.png',
-                ),
-                VipPlanCard(
-                  title: "Platinum",
-                  price: "7",
-                  orders: "+100 ORDERS / PER MONTH",
-                  imageAsset: 'assets/images/platinum.png',
-                ),
-              ],
+              children: plans,
             ),
           ),
+
+
         ],
       ),
     );
   }
 }
+
 
 
 class VipPlanCard extends StatefulWidget {
