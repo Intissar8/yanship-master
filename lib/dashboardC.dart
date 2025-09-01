@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 import 'CustomerProfileScreen.dart';
 import 'PrintLabelPage.dart';
 import 'add_shipment_screen.dart';
@@ -112,6 +113,283 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
   String statusFilter = "";
   Set<String> expandedRows = {};
   String _currentLang = 'en'; // default language
+
+
+  void _openChatDialog() {
+    TextEditingController _chatController = TextEditingController();
+    List<Map<String, dynamic>> messages = []; // { "text": "...", "fromUser": true/false, "time": DateTime }
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade700,
+                    borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Chat Assistant",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(Icons.close, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Messages List
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    child: ListView.builder(
+                      reverse: true,
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = messages[messages.length - 1 - index];
+                        final isUser = msg['fromUser'] as bool;
+                        final time = msg['time'] as DateTime;
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisAlignment: isUser
+                                ? MainAxisAlignment.end
+                                : MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (!isUser)
+                                CircleAvatar(
+                                  backgroundColor: Colors.grey.shade300,
+                                  child: const Icon(Icons.smart_toy, color: Colors.blue),
+                                  radius: 16,
+                                ),
+                              if (!isUser) const SizedBox(width: 6),
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isUser
+                                        ? Colors.blue.shade700
+                                        : Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        msg['text'],
+                                        style: TextStyle(
+                                          color: isUser ? Colors.white : Colors.black87,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Align(
+                                        alignment: Alignment.bottomRight,
+                                        child: Text(
+                                          "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}",
+                                          style: TextStyle(
+                                            color: isUser
+                                                ? Colors.white70
+                                                : Colors.black45,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              if (isUser) const SizedBox(width: 6),
+                              if (isUser)
+                                CircleAvatar(
+                                  backgroundColor: Colors.blue.shade700,
+                                  child: const Icon(Icons.person, color: Colors.white),
+                                  radius: 16,
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+                // Input Field
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _chatController,
+                          decoration: const InputDecoration(
+                            hintText: "Type a message...",
+                            border: InputBorder.none,
+                          ),
+                          minLines: 1,
+                          maxLines: 5,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Colors.blue),
+                        onPressed: () async {
+                          final text = _chatController.text.trim();
+                          if (text.isEmpty) return;
+
+                          final now = DateTime.now();
+                          setState(() {
+                            messages.add({"text": text, "fromUser": true, "time": now});
+                            _chatController.clear();
+                          });
+
+                          final botReply = await _sendMessageToChatbot(text);
+                          setState(() {
+                            messages.add({"text": botReply, "fromUser": false, "time": DateTime.now()});
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  Future<String> _sendMessageToChatbot(String message) async {
+    await Future.delayed(const Duration(milliseconds: 300)); // simulate typing
+
+    final msg = message.toLowerCase();
+
+    // GREETINGS
+    if (msg.contains("hello") || msg.contains("hi")) {
+      return "Hello! How can I help you with your shipments today?";
+    }
+    if (msg.contains("how are you")) {
+      return "I'm just a chatbot, but I'm ready to help you with your shipments!";
+    }
+
+    // HELP / NAVIGATION
+    if (msg.contains("help") || msg.contains("assist")) {
+      return "You can ask me about shipment status, totals, delivered/pending shipments, creating new orders, printing labels, or your profile.";
+    }
+
+    // Create a list to collect responses
+    List<String> responses = [];
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return "Please log in to check your shipments.";
+
+    // Fetch all shipments for this user once
+    final snapshot = await FirebaseFirestore.instance
+        .collection('shipments')
+        .where('clientId', isEqualTo: user.uid)
+        .get();
+
+    final docs = snapshot.docs;
+
+    // TOTAL SHIPMENTS
+    if (msg.contains("total") || msg.contains("how many shipments")) {
+      responses.add("You currently have ${docs.length} shipment(s).");
+    }
+
+    // DELIVERED
+    if (msg.contains("delivered") || msg.contains("completed")) {
+      final delivered = docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return (data['status'] ?? '').toString().toLowerCase() == "confirmed";
+      }).length;
+      responses.add("You have $delivered delivered shipment(s).");
+    }
+
+    // PENDING / CREATED / PICKUP
+    if (msg.contains("pending") || msg.contains("waiting")) {
+      final pending = docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = (data['status'] ?? '').toString().toLowerCase();
+        return status == "created" || status == "pickup";
+      }).length;
+      responses.add("You have $pending pending shipment(s).");
+    }
+
+    // PRINT LABEL
+    if (msg.contains("print label") || msg.contains("print")) {
+      responses.add("To print a shipment label, click the 'Print Label' action in your shipments table.");
+    }
+
+    // CREATE ORDER
+    if (msg.contains("create order") || msg.contains("new shipment")) {
+      responses.add("To create a new shipment, click on the 'Create New Order' button in your dashboard.");
+    }
+
+    // PROFILE
+    if (msg.contains("profile")) {
+      responses.add("To view your profile, click the 'Profile' button on the top-right corner.");
+    }
+
+    // PRICE / COST
+    if (msg.contains("price") || msg.contains("cost")) {
+      responses.add("Shipment prices are displayed in the Price column for each shipment.");
+    }
+
+    // If nothing matched, fallback
+    if (responses.isEmpty) {
+      responses.add("Sorry, I didn't understand that. You can ask about shipment status, totals, delivered/pending shipments, creating orders, printing labels, or your profile.");
+    }
+
+    // Combine all responses into one string
+    return responses.join(" ");
+  }
+
 
 
 
@@ -473,6 +751,22 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _openChatDialog(),
+        backgroundColor: Colors.blue.shade700, // slightly deeper blue
+        foregroundColor: Colors.white,          // icon color white
+        elevation: 6,                           // subtle shadow
+        highlightElevation: 12,                 // when pressed
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16), // modern rounded shape
+        ),
+        child: const Icon(
+          Icons.chat_bubble_outline,
+          size: 28, // slightly bigger icon for better visibility
+        ),
+      ),
+
+
     );
   }
 
@@ -488,23 +782,36 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
         final isExpanded = expandedRows.contains(doc.id);
 
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6.0),
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Card(
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            elevation: 4,
+            color: Colors.white,
+            elevation: 6,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)),
+            shadowColor: Colors.black26,
             child: Column(
               children: [
                 ListTile(
-                  title: Text(data['receiverName'] ?? ""),
-                  subtitle: Text("City: ${data['city'] ?? ""}"),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  title: Text(
+                    data['receiverName'] ?? "",
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  subtitle: Text(
+                    "City: ${data['city'] ?? ""}",
+                    style: const TextStyle(color: Colors.black54),
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _buildStatusChip(status),
                       IconButton(
                         icon: Icon(
-                          isExpanded ? Icons.expand_less : Icons.expand_more,
+                          isExpanded
+                              ? Icons.expand_less
+                              : Icons.expand_more,
                           color: Colors.blueGrey,
                         ),
                         onPressed: () {
@@ -527,15 +834,38 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                 if (isExpanded)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    color: Colors.blue.shade50,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDetailRow(_t("address", _currentLang), data['address'] ?? 'N/A'),
-                        _buildDetailRow(_t("phone", _currentLang), data['phone'] ?? 'N/A'),
-                        _buildDetailRow(_t("price", _currentLang), "MAD ${data['price'] ?? ''}"),
+                        _buildDetailRowModern(
+                            _t("address", _currentLang),
+                            data['address'] ?? 'N/A'),
+                        _buildDetailRowModern(
+                            _t("phone", _currentLang),
+                            data['phone'] ?? 'N/A'),
+                        _buildDetailRowModern(
+                            _t("price", _currentLang),
+                            "MAD ${data['price'] ?? ''}"),
+                        _buildDetailRowModern(
+                            _t("created_at", _currentLang),
+                            data['createdAt'] != null
+                                ? (data['createdAt'] is Timestamp
+                                ? (data['createdAt'] as Timestamp)
+                                .toDate()
+                                .toString()
+                                : data['createdAt'].toString())
+                                : 'N/A'),
+                        _buildDetailRowModern(
+                            _t("status", _currentLang),
+                            data['status'] ?? 'N/A'),
                       ],
                     ),
                   ),
@@ -546,6 +876,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
       },
     );
   }
+
   void _showDetailsDialog(Map<String, dynamic> data) {
     showDialog(
       context: context,
@@ -670,6 +1001,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
       ),
     );
   }
+
 
 
 
