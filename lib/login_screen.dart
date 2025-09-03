@@ -9,6 +9,8 @@ import 'dashboardC.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dashboard_driver.dart';
+
 
 
 class LoginScreen extends StatefulWidget {
@@ -45,33 +47,52 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Sign in with Firebase Auth
+      // Connexion Firebase Auth
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
 
       final uid = userCredential.user!.uid;
 
-      // Get user role
-      final userDoc = await FirebaseFirestore.instance
+      // Vérifier d’abord si c’est un admin (dans clients avec role = admin)
+      final clientDoc = await FirebaseFirestore.instance
           .collection('clients')
           .doc(uid)
           .get();
 
-      final role = userDoc.data()?['role'] ?? 'user';
-
-      if (!mounted) return;
-
-      if (role == 'admin') {
+      if (clientDoc.exists && clientDoc.data()?['role'] == 'admin') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const ShipmentsTablePage()),
         );
-      } else {
+        return;
+      }
+
+      // Vérifier si c’est un client
+      if (clientDoc.exists) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const ShipmentsListStyled()),
         );
+        return;
       }
+
+      // Vérifier si c’est un driver
+      final driverDoc = await FirebaseFirestore.instance
+          .collection('drivers')
+          .doc(uid)
+          .get();
+
+      if (driverDoc.exists) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DriverShipmentsPage()),
+        );
+        return;
+      }
+
+      // Aucun rôle trouvé
+      _showError("Unknown role for this account");
+
     } on FirebaseAuthException catch (e) {
       String message = switch (e.code) {
         'user-not-found' => 'No user found for that email.',
@@ -85,6 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
 
 
   void _showError(String message) {

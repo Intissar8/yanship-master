@@ -306,89 +306,62 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
 
 
   Future<String> _sendMessageToChatbot(String message) async {
-    await Future.delayed(const Duration(milliseconds: 300)); // simulate typing
-
     final msg = message.toLowerCase();
-
-    // GREETINGS
-    if (msg.contains("hello") || msg.contains("hi")) {
-      return "Hello! How can I help you with your shipments today?";
-    }
-    if (msg.contains("how are you")) {
-      return "I'm just a chatbot, but I'm ready to help you with your shipments!";
-    }
-
-    // HELP / NAVIGATION
-    if (msg.contains("help") || msg.contains("assist")) {
-      return "You can ask me about shipment status, totals, delivered/pending shipments, creating new orders, printing labels, or your profile.";
-    }
-
-    // Create a list to collect responses
-    List<String> responses = [];
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return "Please log in to check your shipments.";
 
-    // Fetch all shipments for this user once
+    // Fetch all shipments for this user
     final snapshot = await FirebaseFirestore.instance
         .collection('shipments')
         .where('clientId', isEqualTo: user.uid)
         .get();
-
     final docs = snapshot.docs;
 
-    // TOTAL SHIPMENTS
-    if (msg.contains("total") || msg.contains("how many shipments")) {
-      responses.add("You currently have ${docs.length} shipment(s).");
+    // Fetch all questions from Firestore
+    final questionsSnapshot = await FirebaseFirestore.instance
+        .collection('chatbot_questions')
+        .get();
+
+    String? matchedResponse;
+
+    // Sort documents by longest keyword first to match more specific phrases first
+    final sortedDocs = questionsSnapshot.docs.toList()
+      ..sort((a, b) {
+        final aLongest = (a.data()['keywords'] as List)
+            .map((k) => k.toString().length)
+            .fold(0, (prev, len) => len > prev ? len : prev);
+        final bLongest = (b.data()['keywords'] as List)
+            .map((k) => k.toString().length)
+            .fold(0, (prev, len) => len > prev ? len : prev);
+        return bLongest.compareTo(aLongest); // longest first
+      });
+
+    for (var doc in sortedDocs) {
+      final data = doc.data();
+      final keywords = List<String>.from(data['keywords'] ?? []);
+      final response = data['response'] ?? "";
+
+      // Match any keyword or phrase in the message
+      if (keywords.any((k) => msg.contains(k.toLowerCase()))) {
+        matchedResponse = response;
+        break; // stop at first match
+      }
     }
 
-    // DELIVERED
-    if (msg.contains("delivered") || msg.contains("completed")) {
-      final delivered = docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return (data['status'] ?? '').toString().toLowerCase() == "confirmed";
-      }).length;
-      responses.add("You have $delivered delivered shipment(s).");
-    }
+    // Fallback if nothing matched
+    matchedResponse ??= "Sorry, I didn't understand that. You can ask about shipments, totals, delivered/pending, creating orders, printing labels, or your profile.";
 
-    // PENDING / CREATED / PICKUP
-    if (msg.contains("pending") || msg.contains("waiting")) {
-      final pending = docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        final status = (data['status'] ?? '').toString().toLowerCase();
-        return status == "created" || status == "pickup";
-      }).length;
-      responses.add("You have $pending pending shipment(s).");
-    }
+    // Replace placeholders dynamically
+    matchedResponse = matchedResponse.replaceAll(
+      "[X]",
+      docs.length.toString(),
+    );
 
-    // PRINT LABEL
-    if (msg.contains("print label") || msg.contains("print")) {
-      responses.add("To print a shipment label, click the 'Print Label' action in your shipments table.");
-    }
-
-    // CREATE ORDER
-    if (msg.contains("create order") || msg.contains("new shipment")) {
-      responses.add("To create a new shipment, click on the 'Create New Order' button in your dashboard.");
-    }
-
-    // PROFILE
-    if (msg.contains("profile")) {
-      responses.add("To view your profile, click the 'Profile' button on the top-right corner.");
-    }
-
-    // PRICE / COST
-    if (msg.contains("price") || msg.contains("cost")) {
-      responses.add("Shipment prices are displayed in the Price column for each shipment.");
-    }
-
-    // If nothing matched, fallback
-    if (responses.isEmpty) {
-      responses.add("Sorry, I didn't understand that. You can ask about shipment status, totals, delivered/pending shipments, creating orders, printing labels, or your profile.");
-    }
-
-    // Combine all responses into one string
-    return responses.join(" ");
+    return matchedResponse;
   }
+
+
 
 
 
@@ -907,7 +880,7 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _t("shipment_details", _currentLang),
+                      _t("shipment details", _currentLang),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,

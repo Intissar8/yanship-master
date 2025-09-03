@@ -194,15 +194,17 @@ class HomeSection extends StatelessWidget {
       crossAxisAlignment:
       isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Yan Ship offers a\ncomplete delivery pack.",
           style: TextStyle(
-            fontSize: 42,
+            fontSize: isMobile ? 28 : 42, // smaller font on mobile
             fontWeight: FontWeight.bold,
             height: 1.4,
-            color: Color(0xFF222222),
+            color: const Color(0xFF222222),
           ),
+          textAlign: isMobile ? TextAlign.center : TextAlign.start,
         ),
+
         const SizedBox(height: 25),
         const Text(
           "We are your partner and your extension, picking up your products and warehousing "

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Update Shipment Status</title>
+
+    <!-- Firebase compat SDKs -->
+    <script defer src="/__/firebase/12.2.1/firebase-app-compat.js"></script>
+    <script defer src="/__/firebase/12.2.1/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/init.js"></script>
+
+    <style>
+        body { font-family: Arial, sans-serif; background: #ECEFF1; margin: 0; padding: 0; }
+        #message {
+          max-width: 400px;
+          margin: 100px auto;
+          background: white;
+          padding: 32px 24px;
+          border-radius: 8px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+          text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div id="message">
+    <h2>Updating shipment status...</h2>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const messageEl = document.getElementById('message');
+
+      // Make sure Firebase is loaded
+      if (!window.firebase || !firebase.firestore) {
+        messageEl.innerHTML = "<h2>Error:</h2><p>Firebase not loaded!</p>";
+        return;
+      }
+
+      const db = firebase.firestore();
+
+      // Get URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const shipmentId = urlParams.get('shipmentId');
+      const statusParam = urlParams.get('status');
+
+      if (!shipmentId || !statusParam) {
+        messageEl.innerHTML = "<h2>Error:</h2><p>Missing shipmentId or status in URL.</p>";
+        return;
+      }
+
+      // Update Firestore
+      db.collection('shipments').doc(shipmentId).update({ deliveryStatus: statusParam })
+        .then(() => {
+          messageEl.innerHTML = `<h2>Success!</h2><p>Status updated to "<strong>${statusParam}</strong>"</p>`;
+        })
+        .catch(err => {
+          console.error(err);
+          messageEl.innerHTML = "<h2>Error:</h2><p>Failed to update status. Check console for details.</p>";
+        });
+    });
+</script>
+
+</body>
+</html>

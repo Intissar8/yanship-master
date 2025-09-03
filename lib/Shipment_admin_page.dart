@@ -271,7 +271,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
             const PopupMenuDivider(),
             _menuItem("Edit Shipment", Icons.edit, Colors.black87),
             _menuItem("Print Label", Icons.print, Colors.black87),
-            _menuItem("Send Mail", Icons.mail, Colors.black87),
+            _menuItem("Send Message", Icons.mail, Colors.black87),
           ];
 
           if (shipment["status"] == "Confirm") {
@@ -300,7 +300,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                 ),
               ),
             );
-          } else if (value == "Send Mail") {
+          } else if (value == "Send Message") {
             _sendWhatsAppMessage(shipment["id"]);
           } else if (value == "Print Label") {
             Navigator.push(
@@ -1152,7 +1152,7 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                   const PopupMenuDivider(),
                   _menuItem("Edit Shipment", Icons.edit, Colors.black87),
                   _menuItem("Print Label", Icons.print, Colors.black87),
-                  _menuItem("Send Mail", Icons.mail, Colors.black87),
+                  _menuItem("Send Message", Icons.mail, Colors.black87),
                 ];
 
                 if (shipment["status"] == "Confirm") {
@@ -1160,55 +1160,55 @@ class _ShipmentsTablePageState extends State<ShipmentsTablePage> {
                 }
                 return items;
               },
-          onSelected: (value) async {
-            if (statusColors.containsKey(value)) {
-              setState(() {
-                shipments[index]["selectedStatus"] = value;
-              });
+              onSelected: (value) async {
+                if (statusColors.containsKey(value)) {
+                  setState(() {
+                    shipments[index]["selectedStatus"] = value;
+                  });
 
-              try {
-                await FirebaseFirestore.instance
-                    .collection('shipments')
-                    .doc(shipment["id"])
-                    .update({'secondAdminValue': value});
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Error updating Firestore: $e")),
-                );
-              }
-            } else if (value == "Assign Driver") {
-              _showAssignDriverDialog(shipment["id"]);
-            } else if (value == "Edit Shipment") {
-              // Navigate to AddShipmentScreen with the shipment ID
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AddShipmentScreen(
-                    shipmentId: shipment["id"],
-                    currentLang: 'en', // or pass the appropriate language
-                  ),
-                ),
-              );
-            }else if (value == "Send Mail") {
-              _sendWhatsAppMessage(shipment["id"]);
-            } else if (value == "Print Label") {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PrintLabelPage(shipment: shipment),
-                ),
-              );
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('shipments')
+                        .doc(shipment["id"])
+                        .update({'secondAdminValue': value});
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error updating Firestore: $e")),
+                    );
+                  }
+                } else if (value == "Assign Driver") {
+                  _showAssignDriverDialog(shipment["id"]);
+                } else if (value == "Edit Shipment") {
+                  // Navigate to AddShipmentScreen with the shipment ID
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddShipmentScreen(
+                        shipmentId: shipment["id"],
+                        currentLang: 'en', // or pass the appropriate language
+                      ),
+                    ),
+                  );
+                }else if (value == "Send Massage") {
+                  _sendWhatsAppMessage(shipment["id"]);
+                } else if (value == "Print Label") {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PrintLabelPage(shipment: shipment),
+                    ),
+                  );
 
-            }else {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text("Action: $value")));
-            }
-          },
+                }else {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text("Action: $value")));
+                }
+              },
 
-        ),
-      ),
+            ),
+          ),
 
-    ]);
+        ]);
   }
 
   PopupMenuItem<String> _menuItem(String text, IconData icon, Color color) {
