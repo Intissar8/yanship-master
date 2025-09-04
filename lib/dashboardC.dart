@@ -539,7 +539,6 @@ class _ShipmentsListStyledState extends State<ShipmentsListStyled> {
         actions: [
           DropdownButton<String>(
             value: _currentLang,
-            dropdownColor: Colors.blue.shade800,
             underline: const SizedBox(),
             style: const TextStyle(color: Colors.black45, fontSize: 16),
             onChanged: (value) {
