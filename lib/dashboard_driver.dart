@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 import 'acceuil.dart';
 import 'DriverProfileScreen.dart';
@@ -28,6 +29,7 @@ String _t(String key, String lang) {
         "created": "Créée",
         "pickup": "En collecte",
         "confirmed": "Confirmée",
+        "update_status": "Changer le statut",
       }[key] ?? key;
     case 'ar':
       return {
@@ -47,6 +49,7 @@ String _t(String key, String lang) {
         "created": "تم الإنشاء",
         "pickup": "في الاستلام",
         "confirmed": "تم التأكيد",
+        "update_status": "تغيير الحالة",
       }[key] ?? key;
     default:
       return {
@@ -66,6 +69,7 @@ String _t(String key, String lang) {
         "created": "Created",
         "pickup": "Pickup",
         "confirmed": "Confirmed",
+        "update_status": "Update Status",
       }[key] ?? key;
   }
 }
@@ -82,10 +86,8 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
   String _currentLang = 'en';
   String searchQuery = "";
   String? selectedStatus;
-  Set<String> expandedRows = {};
-
-  // Cache pour les infos drivers
   Map<String, Map<String, String>> driverCache = {};
+  Map<String, bool> _expandedShipments = {}; // pour mobile
 
   @override
   void initState() {
@@ -103,44 +105,174 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
     setState(() {});
   }
 
-  Widget _buildStatusChip(String status) {
-    Color color;
-    switch (status.toLowerCase()) {
-      case "created":
-        color = Colors.blue;
-        break;
-      case "pickup":
-        color = Colors.lightBlue;
-        break;
-      case "confirmed":
-        color = Colors.orange;
-        break;
-      default:
-        color = Colors.grey;
+  // ================== Format Timestamp ==================
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return '-';
+    try {
+      final date = timestamp is DateTime
+          ? timestamp
+          : (timestamp is Timestamp ? timestamp.toDate() : DateTime.parse(timestamp.toString()));
+      return DateFormat('yyyy-MM-dd HH:mm').format(date);
+    } catch (e) {
+      return '-';
     }
-    return Chip(
-      label: Text(
-        _t(status.toLowerCase(), _currentLang),
-        style: TextStyle(color: color, fontWeight: FontWeight.bold),
-      ),
-      backgroundColor: color.withOpacity(0.15),
-      visualDensity: VisualDensity.compact,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+  }
+
+  // ================== Popup Web ==================
+  void _showShipmentDetails(Map<String, dynamic> data) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.white,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Text(
+                    "Shipment Details",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade800,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildDetailRow("Receiver", data['receiverName']),
+                _buildDetailRow("Price", "MAD ${data['price'] ?? '-'}"),
+                _buildDetailRow("City", data['city']),
+                _buildDetailRow("Status", data['deliveryStatus'] ?? data['status']),
+                _buildDetailRow("Address", data['address']),
+                _buildDetailRow("Created At", _formatTimestamp(data['createdAt'])),
+
+                const SizedBox(height: 20),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    label: const Text(
+                      "Close",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  // ================== Detail Row Widget ==================
+  Widget _buildDetailRow(String label, dynamic value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(child: Text(value)),
+          SizedBox(
+            width: 120,
+            child: Text(
+              "$label:",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+          Expanded(
+            child: Text(value?.toString() ?? '-', style: const TextStyle(fontSize: 16)),
+          ),
         ],
       ),
     );
   }
 
+  // ================== Update Status ==================
+  Future<void> _updateStatus(String shipmentId, String newStatus) async {
+    await FirebaseFirestore.instance.collection('shipments').doc(shipmentId).update({
+      "deliveryStatus": newStatus,
+    });
+  }
+
+  void _showStatusDialog(String shipmentId) {
+    final statuses = ["Picked up", "No Answer", "Reported", "Rejected", "Cancelled", "Delivered"];
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(_t("update_status", _currentLang)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: statuses
+                .map(
+                  (status) => ListTile(
+                title: Text(status),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _updateStatus(shipmentId, status);
+                },
+              ),
+            )
+                .toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    IconData icon;
+    Color color;
+
+    switch (status.toLowerCase()) {
+      case "picked up":
+        icon = Icons.inventory_2;
+        color = Colors.orange;
+        break;
+      case "no answer":
+        icon = Icons.phone_missed;
+        color = Colors.redAccent;
+        break;
+      case "delivered":
+        icon = Icons.check_circle;
+        color = Colors.green;
+        break;
+      case "canceled":
+        icon = Icons.cancel;
+        color = Colors.grey;
+        break;
+      case "in progress":
+        icon = Icons.local_shipping;
+        color = Colors.blue;
+        break;
+      case "pending":
+        icon = Icons.hourglass_empty;
+        color = Colors.amber;
+        break;
+      default:
+        icon = Icons.help_outline;
+        color = Colors.grey;
+    }
+
+    return Chip(
+      avatar: Icon(icon, color: Colors.white, size: 18),
+      label: Text(status, style: const TextStyle(color: Colors.white)),
+      backgroundColor: color,
+    );
+  }
+
+  // ================== BUILD ==================
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 800;
@@ -157,19 +289,12 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Image.asset(
-                'assets/images/logo.png',
-                height: 45,
-              ),
+              child: Image.asset('assets/images/logo.png', height: 45),
             ),
             const SizedBox(width: 12),
             Text(
               _t("dashboard_driver", _currentLang),
-              style: const TextStyle(
-                color: Colors.black87,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -193,7 +318,6 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             onSelected: (value) async {
               if (value == 'profile') {
-                // ======= ICI on ouvre le profil du driver =======
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -205,10 +329,7 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
                 );
               } else if (value == 'logout') {
                 await FirebaseAuth.instance.signOut();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const HomePage()),
-                );
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
               }
             },
             itemBuilder: (context) => [
@@ -233,9 +354,9 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
                 ),
               ),
             ],
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: CircleAvatar(child: const Icon(Icons.person)),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: CircleAvatar(child: Icon(Icons.person)),
             ),
           ),
         ],
@@ -257,12 +378,7 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return Center(
-                      child: Text(
-                        _t("no_shipments", _currentLang),
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                    );
+                    return Center(child: Text(_t("no_shipments", _currentLang), style: const TextStyle(fontSize: 18)));
                   }
 
                   final filteredDocs = snapshot.data!.docs.where((doc) {
@@ -288,7 +404,7 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
     );
   }
 
-  // ================== Search & Filter Controls ==================
+  // ================== TOP CONTROLS ==================
   Widget _buildTopControls(bool isMobile) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -363,79 +479,86 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
     );
   }
 
-// ================== MOBILE VIEW ==================
+  // ================== MOBILE VIEW ==================
+  // ================== MOBILE VIEW ==================
   Widget _buildMobileView(List<QueryDocumentSnapshot> filteredDocs) {
-    return ListView.builder(
-      itemCount: filteredDocs.length,
-      itemBuilder: (context, index) {
-        final doc = filteredDocs[index];
-        final data = doc.data() as Map<String, dynamic>;
-        final isExpanded = expandedRows.contains(doc.id);
-        final driverName = driverCache[data['driverId']]?['name'] ?? "-";
+    return SingleChildScrollView(
+      child: ExpansionPanelList.radio(
+        expandedHeaderPadding: const EdgeInsets.symmetric(vertical: 4),
+        children: filteredDocs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final deliveryStatus = data['deliveryStatus'] ?? data['status'] ?? "-";
+          final shipmentId = doc.id;
+          final city = data['city'] ?? "-";
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6.0),
-          child: Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            elevation: 4,
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text(data['receiverName'] ?? ""),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("${_t("city", _currentLang)}: ${data['city'] ?? ""}"),
-                      Text("${_t("status", _currentLang)}: ${data['status'] ?? ""}"),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: Icon(
-                      isExpanded ? Icons.expand_less : Icons.expand_more,
-                      color: Colors.blueGrey,
+          return ExpansionPanelRadio(
+            value: shipmentId,
+            headerBuilder: (context, isExpanded) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center, // <-- centré verticalement
+                  children: [
+                    // Colonne des infos
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Receiver: ${data['receiverName'] ?? '-'}",
+                              style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text("City: $city", style: const TextStyle(color: Colors.black54)),
+                          const SizedBox(height: 4),
+                          Text("Status: $deliveryStatus",
+                              style: const TextStyle(color: Colors.blueAccent)),
+                        ],
+                      ),
                     ),
-                    onPressed: () {
-                      setState(() {
-                        if (isExpanded) {
-                          expandedRows.remove(doc.id);
-                        } else {
-                          expandedRows.add(doc.id);
-                        }
-                      });
-                    },
-                  ),
+                    // Icône stylo alignée verticalement au centre
+                    if (deliveryStatus.toLowerCase() != "delivered")
+                      Center(
+                        child: IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blueGrey),
+                          onPressed: () => _showStatusDialog(shipmentId),
+                        ),
+                      ),
+                  ],
                 ),
-                if (isExpanded)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    color: Colors.blue.shade50,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDetailRow(_t("sender", _currentLang), driverName),
-                        _buildDetailRow(_t("receiver", _currentLang), data['receiverName'] ?? "-"),
-                        _buildDetailRow(_t("price", _currentLang), "MAD ${data['price'] ?? ''}"),
-                        _buildDetailRow(_t("city", _currentLang), data['city'] ?? "-"),
-                        _buildDetailRow(_t("status", _currentLang), data['status'] ?? "-"),
-                      ],
-                    ),
-                  ),
-              ],
+              );
+            },
+
+            body: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDetailRow("Receiver", data['receiverName']),
+                  _buildDetailRow("Price", "MAD ${data['price'] ?? '-'}"),
+                  _buildDetailRow("City", data['city']),
+                  _buildDetailRow("Status", deliveryStatus),
+                  _buildDetailRow("Address", data['address']),
+                  _buildDetailRow("Created At", _formatTimestamp(data['createdAt'])),
+
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        }).toList(),
+      ),
     );
   }
 
-// ================== WEB VIEW ==================
+  // ================== WEB VIEW ==================
   Widget _buildWebView(List<QueryDocumentSnapshot> filteredDocs) {
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 700, maxWidth: 1200),
+          constraints: const BoxConstraints(minWidth: 900, maxWidth: 1500),
           child: Column(
             children: [
               // Header
@@ -444,73 +567,58 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
                 color: Colors.blue.shade100,
                 child: Row(
                   children: [
-                    SizedBox(width: 200, child: Text(_t("sender", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
-                    SizedBox(width: 200, child: Text(_t("receiver", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
-                    SizedBox(width: 120, child: Text(_t("price", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
-                    SizedBox(width: 150, child: Text(_t("city", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
-                    SizedBox(width: 150, child: Text(_t("status", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
+                    SizedBox(width: 250, child: Text(_t("sender", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
+                    SizedBox(width: 250, child: Text(_t("receiver", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
+                    SizedBox(width: 150, child: Text(_t("price", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
+                    SizedBox(width: 200, child: Text(_t("city", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
+                    SizedBox(width: 180, child: Text(_t("status", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
+                    SizedBox(width: 150, child: Text(_t("actions", _currentLang), style: const TextStyle(fontWeight: FontWeight.bold))),
                   ],
                 ),
               ),
               // Rows
               ...filteredDocs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
-                final isExpanded = expandedRows.contains(doc.id);
                 final driverName = driverCache[data['driverId']]?['name'] ?? "-";
+                final deliveryStatus = data['deliveryStatus'] ?? data['status'] ?? "-";
 
-                return Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 250, child: Text(driverName)),
+                      SizedBox(width: 250, child: Text(data['receiverName'] ?? "")),
+                      SizedBox(width: 150, child: Text("MAD ${data['price'] ?? ''}")),
+                      SizedBox(width: 200, child: Text(data['city'] ?? "-")),
+                      SizedBox(
+                        width: 180,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _buildStatusChip(deliveryStatus),
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          SizedBox(width: 200, child: Text(driverName)),
-                          SizedBox(width: 200, child: Text(data['receiverName'] ?? "")),
-                          SizedBox(width: 120, child: Text("MAD ${data['price'] ?? ''}")),
-                          SizedBox(width: 150, child: Text(data['city'] ?? "-")),
-                          SizedBox(
-                            width: 150,
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: _buildStatusChip(data['status'] ?? ""),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more, color: Colors.blueGrey),
-                            onPressed: () {
-                              setState(() {
-                                if (isExpanded) {
-                                  expandedRows.remove(doc.id);
-                                } else {
-                                  expandedRows.add(doc.id);
-                                }
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (isExpanded)
-                      Container(
-                        width: double.infinity,
-                        color: Colors.blue.shade50,
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      SizedBox(
+                        width: 150,
+                        child: Row(
                           children: [
-                            _buildDetailRow(_t("sender", _currentLang), driverName),
-                            _buildDetailRow(_t("receiver", _currentLang), data['receiverName'] ?? "-"),
-                            _buildDetailRow(_t("price", _currentLang), "MAD ${data['price'] ?? ''}"),
-                            _buildDetailRow(_t("city", _currentLang), data['city'] ?? "-"),
-                            _buildDetailRow(_t("status", _currentLang), data['status'] ?? "-"),
+                            if (deliveryStatus.toLowerCase() != "delivered")
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blueGrey),
+                                onPressed: () => _showStatusDialog(doc.id),
+                              ),
+                            IconButton(
+                              icon: const Icon(Icons.info, color: Colors.blue),
+                              onPressed: () => _showShipmentDetails(data),
+                            ),
                           ],
                         ),
                       ),
-                  ],
+                    ],
+                  ),
                 );
               }).toList(),
             ],
@@ -518,4 +626,5 @@ class _DriverShipmentsPageState extends State<DriverShipmentsPage> {
         ),
       ),
     );
-  }}
+  }
+}

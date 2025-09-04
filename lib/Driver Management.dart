@@ -360,8 +360,10 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
 
                   final drivers = snapshot.data!.docs
                       .where((doc) =>
+                  doc.id != "l9NAeBpLShJMVxo54CVL" && // exclure l'admin
                       _matchesSearch(doc.data() as Map<String, dynamic>))
                       .toList();
+
 
                   if (drivers.isEmpty) {
                     return const Center(
