@@ -22,13 +22,12 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchText = "";
   Map<String, dynamic>? adminData;
-  int _currentIndex = -1; // add this to state class
-
+  int _currentIndex = -1;
 
   Future<void> _loadAdminData() async {
     final snapshot = await FirebaseFirestore.instance
         .collection('admin')
-        .doc('lQwnBDMD1rKNUiwz29Oa') // your admin doc ID
+        .doc('lQwnBDMD1rKNUiwz29Oa') // admin doc ID
         .get();
     if (snapshot.exists) {
       setState(() {
@@ -36,17 +35,16 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
       });
     }
   }
+
   Widget _buildProfileAvatar(String? avatarUrl) {
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       try {
-        // Decode base64 string into bytes
         Uint8List bytes = base64Decode(avatarUrl);
         return CircleAvatar(
           radius: 18,
           backgroundImage: MemoryImage(bytes),
         );
       } catch (e) {
-        // Fallback if decoding fails
         return const CircleAvatar(
           radius: 18,
           backgroundColor: Colors.blue,
@@ -54,7 +52,6 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
         );
       }
     } else {
-      // Default avatar
       return const CircleAvatar(
         radius: 18,
         backgroundColor: Colors.blue,
@@ -62,7 +59,6 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
       );
     }
   }
-
 
   @override
   void initState() {
@@ -74,6 +70,7 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
     });
     _loadAdminData();
   }
+
   PreferredSizeWidget _buildAppBar(bool isMobile) {
     return AppBar(
       automaticallyImplyLeading: false,
@@ -82,12 +79,9 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
       titleSpacing: 16,
       title: Row(
         children: [
-          // Logo
           Image.asset('assets/images/logo.png', height: 40),
-
           if (!isMobile) ...[
             const SizedBox(width: 24),
-            // Shipments Dropdown
             PopupMenuButton<String>(
               child: Row(
                 children: [
@@ -119,7 +113,6 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
               ],
             ),
             const SizedBox(width: 24),
-            // Users Dropdown
             PopupMenuButton<String>(
               child: Row(
                 children: [
@@ -151,11 +144,7 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
               ],
             ),
           ],
-
-          // Spacer to push language + profile to the far right
           const Spacer(),
-
-          // Language Dropdown
           DropdownButton<String>(
             value: 'English',
             underline: const SizedBox(),
@@ -168,8 +157,6 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
             ],
           ),
           const SizedBox(width: 12),
-
-          // Profile Circle
           PopupMenuButton<String>(
             offset: const Offset(0, 50),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -192,9 +179,9 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
       ),
     );
   }
+
   bool _matchesSearch(Map<String, dynamic> data) {
-    final name =
-    "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".toLowerCase();
+    final name = "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".toLowerCase();
     final email = (data['email'] ?? '').toLowerCase();
     final vehicleCode = (data['vehicleCode'] ?? '').toLowerCase();
     final vehicleReg = (data['vehicleReg'] ?? '').toLowerCase();
@@ -264,7 +251,6 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
             ),
             const SizedBox(height: 12),
 
-            /// 🔹 MOBILE: Barre de recherche puis bouton en dessous
             if (isMobile) ...[
               TextField(
                 controller: _searchController,
@@ -304,7 +290,6 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
               const SizedBox(height: 12),
             ],
 
-            /// 🔹 WEB: Barre et bouton côte à côte
             if (!isMobile)
               Row(
                 children: [
@@ -337,8 +322,7 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) =>
-                            const RegisterDriverScreen()),
+                            builder: (context) => const RegisterDriverScreen()),
                       );
                     },
                     icon: const Icon(Icons.person_add),
@@ -348,11 +332,9 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
               ),
             const SizedBox(height: 16),
 
-            /// 🔹 LISTE
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream:
-                FirebaseFirestore.instance.collection('drivers').snapshots(),
+                stream: FirebaseFirestore.instance.collection('drivers').snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
@@ -360,10 +342,9 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
 
                   final drivers = snapshot.data!.docs
                       .where((doc) =>
-                  doc.id != "l9NAeBpLShJMVxo54CVL" && // exclure l'admin
+                  doc.id != "l9NAeBpLShJMVxo54CVL" && // exclure admin
                       _matchesSearch(doc.data() as Map<String, dynamic>))
                       .toList();
-
 
                   if (drivers.isEmpty) {
                     return const Center(
@@ -372,7 +353,6 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
                     );
                   }
 
-                  /// MOBILE LIST
                   if (isMobile) {
                     return ListView.builder(
                       itemCount: drivers.length,
@@ -416,7 +396,6 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
                                           builder: (_) => DriverProfileScreen(driverId: doc.id),
                                         ),
                                       );
-
                                     }),
                                 IconButton(
                                     icon: const Icon(Icons.delete,
@@ -431,7 +410,6 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
                     );
                   }
 
-                  /// WEB TABLE (ajustée sans scroll horizontal)
                   return Center(
                     child: SizedBox(
                       width: MediaQuery.of(context).size.width * 0.95,
@@ -452,8 +430,8 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
                           width: double.infinity,
                           child: DataTable(
                             columnSpacing: 40,
-                            headingRowColor: MaterialStateProperty.all(
-                                const Color(0xFFE8F0FE)),
+                            headingRowColor:
+                            MaterialStateProperty.all(const Color(0xFFE8F0FE)),
                             columns: const [
                               DataColumn(label: Text("Driver Name")),
                               DataColumn(label: Text("Email")),
@@ -464,8 +442,7 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
                             ],
                             rows: List.generate(drivers.length, (index) {
                               final doc = drivers[index];
-                              final data =
-                              doc.data() as Map<String, dynamic>;
+                              final data = doc.data() as Map<String, dynamic>;
                               final name =
                                   "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}";
                               final email = data['email'] ?? '';
@@ -492,10 +469,10 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) => DriverProfileScreen(driverId: doc.id),
+                                              builder: (_) =>
+                                                  DriverProfileScreen(driverId: doc.id),
                                             ),
                                           );
-
                                         }),
                                     IconButton(
                                         icon: const Icon(Icons.delete,
@@ -532,28 +509,40 @@ class _DriverManagementPageState extends State<DriverManagementPage> {
 
           switch (index) {
             case 0:
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const ShipmentFormStyledPage()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ShipmentFormStyledPage()));
               break;
             case 1:
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const ShipmentsTablePage()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ShipmentsTablePage()));
               break;
             case 2:
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const CustomerManagementPage()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CustomerManagementPage()));
               break;
             case 3:
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const DriverManagementPage()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const DriverManagementPage()));
               break;
           }
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Create Shipment'),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Shipment List'),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Customers'),
-          BottomNavigationBarItem(icon: Icon(Icons.drive_eta), label: 'Drivers'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.add), label: 'Create Shipment'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.list), label: 'Shipment List'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.people), label: 'Customers'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.drive_eta), label: 'Drivers'),
         ],
       )
           : null,
